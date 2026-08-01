@@ -1,51 +1,26 @@
-# Multi-stage Dockerfile para Next.js 16 (App Router) + Prisma ORM en Dokploy
+# Imagen base oficial Node.js v20 Alpine
+FROM node:20-alpine
 
-# --- Etapa 1: Instalación de Dependencias ---
-FROM node:20-alpine AS deps
-RUN apk add --no-cache libc6-compat
+# Directorio de trabajo
 WORKDIR /app
 
-# Copiar descriptores de paquetes y esquema Prisma
-COPY package.json package-lock.json ./
-COPY prisma ./prisma/
+# Copiar manifiesto de dependencias
+COPY package*.json ./
 
-# Instalar dependencias exactas y generar Prisma Client
+# Instalar dependencias
 RUN npm ci
-RUN npx prisma generate
 
-# --- Etapa 2: Compilación (Builder) ---
-FROM node:20-alpine AS builder
-WORKDIR /app
-
-COPY --from=deps /app/node_modules ./node_modules
+# Copiar el proyecto completo
 COPY . .
 
-ENV NODE_ENV=production
-ENV NEXT_TELEMETRY_DISABLED=1
+# Generar cliente de Prisma
+RUN npx prisma generate
 
-# Compilar proyecto en modo Standalone
+# Compilar aplicación Next.js para producción
 RUN npm run build
 
-# --- Etapa 3: Ejecución de Producción (Runner) ---
-FROM node:20-alpine AS runner
-WORKDIR /app
-
-ENV NODE_ENV=production
-ENV NEXT_TELEMETRY_DISABLED=1
-ENV PORT=3000
-ENV HOSTNAME="0.0.0.0"
-
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
-
-# Copiar archivos públicos y el build standalone optimizado
-COPY --from=builder /app/public ./public
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
-COPY --from=builder /app/prisma ./prisma
-
-USER nextjs
-
+# Exponer el puerto por defecto de Next.js
 EXPOSE 3000
 
-CMD ["node", "server.js"]
+# Comando de inicio predeterminado
+CMD ["npm", "start"]
