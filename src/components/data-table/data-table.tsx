@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { useRouter } from 'next/navigation';
 import {
   ColumnDef,
   ColumnFiltersState,
@@ -73,9 +74,18 @@ export function DataTable<TData, TValue>({
   columns,
   data,
 }: DataTableProps<TData, TValue>) {
+  const router = useRouter();
+  const [isRefreshing, setIsRefreshing] = React.useState(false);
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
   const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({});
+
+  // Función para refrescar manualmente los Server Components sin recargar la pestaña
+  const handleManualRefresh = () => {
+    setIsRefreshing(true);
+    router.refresh();
+    setTimeout(() => setIsRefreshing(false), 800);
+  };
 
   const table = useReactTable({
     data,
@@ -162,7 +172,7 @@ export function DataTable<TData, TValue>({
   const selectedCount = table.getFilteredSelectedRowModel().rows.length;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 font-sans">
       {/* Barra de Filtros, Búsqueda y Exportación */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-zinc-900/60 p-4 rounded-xl border border-zinc-800 backdrop-blur-sm">
         <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
@@ -184,7 +194,7 @@ export function DataTable<TData, TValue>({
             <PopoverTrigger
               className={cn(
                 buttonVariants({ variant: 'outline', size: 'sm' }),
-                'h-9 border-dashed border-zinc-700 bg-zinc-950 text-zinc-300 hover:bg-zinc-800 hover:text-white gap-2'
+                'h-9 border-dashed border-zinc-700 bg-zinc-950 text-zinc-300 hover:bg-zinc-800 hover:text-white gap-2 cursor-pointer'
               )}
             >
               <Filter className="h-3.5 w-3.5 text-zinc-400" />
@@ -214,14 +224,15 @@ export function DataTable<TData, TValue>({
                           className="flex items-center gap-2 cursor-pointer hover:bg-zinc-800 text-zinc-200 py-1.5"
                         >
                           <div
-                            className={`flex h-4 w-4 items-center justify-center rounded border border-zinc-700 ${
-                              isSelected ? 'bg-emerald-500 border-emerald-500 text-zinc-950' : 'opacity-50'
-                            }`}
+                            className={cn(
+                              'mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-zinc-700',
+                              isSelected ? 'bg-emerald-600 border-emerald-600 text-white' : 'opacity-50 [&_svg]:invisible'
+                            )}
                           >
-                            {isSelected && <Check className="h-3 w-3 stroke-[3]" />}
+                            <Check className="h-3 w-3" />
                           </div>
-                          <Icon className={`h-3.5 w-3.5 ${option.color}`} />
-                          <span className="text-sm font-medium">{option.label}</span>
+                          <Icon className={cn('h-3.5 w-3.5', option.color)} />
+                          <span className="text-xs font-medium">{option.label}</span>
                         </CommandItem>
                       );
                     })}
@@ -232,9 +243,9 @@ export function DataTable<TData, TValue>({
                       <CommandGroup>
                         <CommandItem
                           onSelect={clearStatusFilter}
-                          className="justify-center text-center text-xs font-semibold text-zinc-400 hover:bg-zinc-800 hover:text-white cursor-pointer py-2"
+                          className="justify-center text-center text-xs text-zinc-400 hover:bg-zinc-800 hover:text-white cursor-pointer py-1.5"
                         >
-                          Limpiar filtros ({selectedStatuses.size})
+                          Limpiar filtros
                         </CommandItem>
                       </CommandGroup>
                     </>
@@ -244,42 +255,37 @@ export function DataTable<TData, TValue>({
             </PopoverContent>
           </Popover>
 
-          {/* Reset rápido si hay filtro activo */}
-          {selectedStatuses.size > 0 && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={clearStatusFilter}
-              className="h-9 text-xs text-zinc-400 hover:text-white hover:bg-zinc-800 px-2.5 gap-1"
-            >
-              <X className="h-3.5 w-3.5" />
-              Limpiar
-            </Button>
-          )}
-        </div>
-
-        {/* Acciones del lado derecho: Selección + Exportar a CSV */}
-        <div className="flex items-center gap-3 self-end lg:self-auto">
-          {selectedCount > 0 && (
-            <Badge className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-3 py-1 font-semibold text-xs animate-in fade-in-50">
-              {selectedCount} {selectedCount === 1 ? 'filas seleccionada' : 'filas seleccionadas'}
-            </Badge>
-          )}
-
+          {/* Botón de Refrescar Datos */}
           <Button
-            onClick={handleExportCSV}
             variant="outline"
             size="sm"
-            className="h-9 bg-zinc-950 border-zinc-800 hover:bg-zinc-800 text-zinc-200 gap-2 font-medium"
+            onClick={handleManualRefresh}
+            disabled={isRefreshing}
+            className="h-9 bg-zinc-950 border-zinc-800 text-zinc-300 hover:bg-zinc-800 hover:text-white gap-2 cursor-pointer"
+            title="Refrescar datos en tiempo real de PostgreSQL"
           >
-            <Download className="h-4 w-4 text-emerald-400" />
+            <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? 'animate-spin text-emerald-400' : 'text-zinc-400'}`} />
+            <span className="hidden sm:inline">Refrescar</span>
+          </Button>
+        </div>
+
+        {/* Acciones de Lote y Exportar a CSV */}
+        <div className="flex items-center gap-3">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExportCSV}
+            className="bg-zinc-950 border-zinc-800 text-zinc-200 hover:bg-zinc-800 hover:text-white gap-2 cursor-pointer h-9 text-xs"
+          >
+            <Download className="h-3.5 w-3.5 text-emerald-400" />
             <span>Exportar CSV</span>
             {selectedCount > 0 && (
-              <span className="text-xs text-emerald-400 font-bold">({selectedCount})</span>
+              <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 px-1.5 text-[10px]">
+                {selectedCount}
+              </Badge>
             )}
           </Button>
-
-          <div className="text-xs text-zinc-400 hidden sm:block border-l border-zinc-800 pl-3">
+          <div className="text-xs text-zinc-400">
             <span className="font-semibold text-zinc-200">{table.getRowModel().rows.length}</span> de{' '}
             <span className="font-semibold text-zinc-200">{data.length}</span>
           </div>
@@ -294,7 +300,7 @@ export function DataTable<TData, TValue>({
               <TableRow key={headerGroup.id} className="border-zinc-800 hover:bg-zinc-900">
                 {headerGroup.headers.map((header) => {
                   return (
-                    <TableHead key={header.id} className="text-zinc-300 font-semibold">
+                    <TableHead key={header.id} className="text-zinc-300 font-semibold text-xs py-3">
                       {header.isPlaceholder
                         ? null
                         : flexRender(
@@ -313,10 +319,10 @@ export function DataTable<TData, TValue>({
                 <TableRow
                   key={row.id}
                   data-state={row.getIsSelected() && 'selected'}
-                  className="border-zinc-800/60 hover:bg-zinc-800/40 data-[state=selected]:bg-emerald-500/10 transition-colors"
+                  className="border-zinc-800/60 hover:bg-zinc-800/40 transition-colors"
                 >
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id} className="py-3">
+                    <TableCell key={cell.id} className="py-3 text-xs">
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </TableCell>
                   ))}
@@ -324,8 +330,8 @@ export function DataTable<TData, TValue>({
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={columns.length} className="h-28 text-center text-zinc-500">
-                  No se encontraron resultados con los filtros seleccionados.
+                <TableCell colSpan={columns.length} className="h-28 text-center text-zinc-500 text-sm">
+                  No se encontraron prospectos que coincidan con los filtros aplicados.
                 </TableCell>
               </TableRow>
             )}
@@ -333,36 +339,36 @@ export function DataTable<TData, TValue>({
         </Table>
       </div>
 
-      {/* Paginación */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-2 py-2">
-        <div className="text-xs text-zinc-400 flex items-center gap-3">
-          <span>
-            <strong className="text-zinc-200 font-semibold">{table.getFilteredSelectedRowModel().rows.length}</strong> de{' '}
-            <strong className="text-zinc-200 font-semibold">{table.getFilteredRowModel().rows.length}</strong> fila(s) seleccionadas.
-          </span>
-          <span className="text-zinc-700">|</span>
-          <span>
-            Página {table.getState().pagination.pageIndex + 1} de {table.getPageCount() || 1}
-          </span>
+      {/* Paginación e Información de Selección */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-2 py-2 text-xs text-zinc-400">
+        <div>
+          {selectedCount > 0 ? (
+            <span>
+              <strong className="text-emerald-400">{selectedCount}</strong> de {table.getFilteredRowModel().rows.length} fila(s) seleccionada(s).
+            </span>
+          ) : (
+            <span>Página {table.getState().pagination.pageIndex + 1} de {table.getPageCount() || 1}</span>
+          )}
         </div>
+
         <div className="flex items-center space-x-2">
           <Button
             variant="outline"
             size="sm"
             onClick={() => table.previousPage()}
             disabled={!table.getCanPreviousPage()}
-            className="border-zinc-800 bg-zinc-900 text-zinc-300 hover:bg-zinc-800 hover:text-white disabled:opacity-40"
+            className="border-zinc-800 bg-zinc-900 text-zinc-300 hover:bg-zinc-800 hover:text-white disabled:opacity-40 h-8 text-xs cursor-pointer"
           >
-            <ChevronLeft className="h-4 w-4 mr-1" /> Anterior
+            <ChevronLeft className="h-3.5 w-3.5 mr-1" /> Anterior
           </Button>
           <Button
             variant="outline"
             size="sm"
             onClick={() => table.nextPage()}
             disabled={!table.getCanNextPage()}
-            className="border-zinc-800 bg-zinc-900 text-zinc-300 hover:bg-zinc-800 hover:text-white disabled:opacity-40"
+            className="border-zinc-800 bg-zinc-900 text-zinc-300 hover:bg-zinc-800 hover:text-white disabled:opacity-40 h-8 text-xs cursor-pointer"
           >
-            Siguiente <ChevronRight className="h-4 w-4 ml-1" />
+            Siguiente <ChevronRight className="h-3.5 w-3.5 ml-1" />
           </Button>
         </div>
       </div>

@@ -69,7 +69,7 @@ export function ScraperHub() {
     return () => window.removeEventListener('scraper-job-added', handleJobAdded);
   }, []);
 
-  // Polling dinámico de estado en la nube de Apify
+  // Polling dinámico de estado en la nube de Apify + Auto-refresh de la tabla
   React.useEffect(() => {
     const activeJobs = jobs.filter((j) => j.status === 'RUNNING' || j.status === 'READY' || j.status === 'BUILDING');
     if (activeJobs.length === 0) return;
@@ -89,10 +89,14 @@ export function ScraperHub() {
               updatedJobs[i] = { ...job, status: newStatus };
 
               if (newStatus === 'SUCCEEDED') {
-                toast.success(`Extracción de "${job.query}" finalizada en Apify. Tu motor backend procesará e ingresará los leads a PostgreSQL.`, {
+                toast.success(`Extracción de "${job.query}" finalizada en Apify. Actualizando datos de PostgreSQL...`, {
                   duration: 6000,
                 });
-                // Auto-remover trabajos completados después de 3 segundos para mantener limpia la UI
+                
+                // Refrescar Server Components inmediatamente al terminar
+                router.refresh();
+
+                // Auto-remover trabajos completados después de 4 segundos
                 setTimeout(() => {
                   setJobs((current) => {
                     const filtered = current.filter((j) => j.runId !== job.runId);
@@ -102,7 +106,7 @@ export function ScraperHub() {
                     return filtered;
                   });
                   router.refresh();
-                }, 3000);
+                }, 4000);
               } else if (newStatus === 'FAILED' || newStatus === 'ABORTED' || newStatus === 'TIMED-OUT') {
                 toast.error(`La extracción de "${job.query}" falló o fue cancelada en Apify. (${newStatus})`);
               }
@@ -113,6 +117,9 @@ export function ScraperHub() {
 
       if (hasChanges) {
         updateJobs(updatedJobs);
+      } else {
+        // Refrescar periódicamente la tabla para mostrar leads procesados gradualmente por el Worker
+        router.refresh();
       }
     }, 4000);
 
@@ -122,6 +129,7 @@ export function ScraperHub() {
   const removeJob = (runId: string) => {
     const filtered = jobs.filter((j) => j.runId !== runId);
     updateJobs(filtered);
+    router.refresh();
   };
 
   const activeCount = jobs.filter((j) => j.status === 'RUNNING' || j.status === 'READY' || j.status === 'BUILDING').length;
@@ -137,7 +145,7 @@ export function ScraperHub() {
           <Button
             variant="outline"
             size="sm"
-            className="bg-zinc-900 border-zinc-800 hover:bg-zinc-800 text-zinc-200 gap-2 h-9 px-3"
+            className="bg-zinc-900 border-zinc-800 hover:bg-zinc-800 text-zinc-200 gap-2 h-9 px-3 font-sans cursor-pointer"
           >
             <Activity className={`h-4 w-4 ${activeCount > 0 ? 'text-amber-400 animate-pulse' : 'text-emerald-400'}`} />
             <span>Extracciones Hub</span>
@@ -153,7 +161,7 @@ export function ScraperHub() {
           </Button>
         }
       />
-      <PopoverContent className="w-80 p-0 bg-zinc-900 border-zinc-800 text-zinc-100 shadow-xl" align="end">
+      <PopoverContent className="w-80 p-0 bg-zinc-900 border-zinc-800 text-zinc-100 shadow-xl font-sans" align="end">
         <div className="p-3 border-b border-zinc-800 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Activity className="h-4 w-4 text-emerald-400" />
@@ -161,7 +169,7 @@ export function ScraperHub() {
           </div>
           {activeCount > 0 && (
             <Badge variant="outline" className="bg-amber-500/10 text-amber-400 border-amber-500/20 text-[10px]">
-              Polling activo
+              Auto-actualizando
             </Badge>
           )}
         </div>

@@ -9,36 +9,71 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { triggerGoogleMapsScraper, ingestManualDataset } from '@/actions/scraper.actions';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { triggerGoogleMapsScraper, ScraperInputOptions } from '@/actions/scraper.actions';
 import { toast } from 'sonner';
-import { Bot, Loader2, Sparkles, Database, Download } from 'lucide-react';
+import { Bot, Loader2, Sparkles, MapPin, Globe2, SlidersHorizontal, Search } from 'lucide-react';
 
 export function ScraperTrigger() {
   const [open, setOpen] = React.useState(false);
-  const [query, setQuery] = React.useState('');
+  
+  // Parámetros de búsqueda
+  const [searchTerms, setSearchTerms] = React.useState('');
+  const [locationQuery, setLocationQuery] = React.useState('');
+  const [countryCode, setCountryCode] = React.useState('CO');
+  const [language, setLanguage] = React.useState('es');
   const [limit, setLimit] = React.useState(50);
-  const [manualDatasetId, setManualDatasetId] = React.useState('');
-  const [isPending, startTransition] = React.useTransition();
-  const [isIngesting, startIngestTransition] = React.useTransition();
+  
+  // Filtros avanzados
+  const [skipClosedPlaces, setSkipClosedPlaces] = React.useState(true);
+  const [scrapeWebsite, setScrapeWebsite] = React.useState(true);
+  const [scrapeEmailsAndSocialMedia, setScrapeEmailsAndSocialMedia] = React.useState(true);
 
-  const handleScraperSubmit = (e: React.FormEvent) => {
+  const [isPending, startTransition] = React.useTransition();
+
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!query.trim()) {
-      toast.error('Por favor ingresa un término de búsqueda.');
+    const termsArray = searchTerms
+      .split(',')
+      .map((t) => t.trim())
+      .filter((t) => t.length > 0);
+
+    if (termsArray.length === 0 && !locationQuery.trim()) {
+      toast.error('Por favor ingresa al menos un término de búsqueda o una ubicación.');
       return;
     }
 
+    const payload: ScraperInputOptions = {
+      searchStringsArray: termsArray.length > 0 ? termsArray : undefined,
+      query: termsArray.length === 1 ? termsArray[0] : undefined,
+      locationQuery: locationQuery.trim() || undefined,
+      countryCode: countryCode !== 'ALL' ? countryCode : undefined,
+      language,
+      maxCrawledPlacesPerSearch: Number(limit) || 50,
+      skipClosedPlaces,
+      scrapeWebsite,
+      scrapeEmailsAndSocialMedia,
+    };
+
     startTransition(async () => {
-      const res = await triggerGoogleMapsScraper(query, Number(limit));
+      const res = await triggerGoogleMapsScraper(payload);
 
       if (res.success && res.data?.runId) {
+        const displayQuery = termsArray.join(', ') || locationQuery.trim() || 'Extracción B2B';
         const newJob = {
           runId: res.data.runId,
-          query: query.trim(),
+          query: displayQuery,
           limit: Number(limit),
           status: res.data.status || 'RUNNING',
           startedAt: Date.now(),
@@ -46,32 +81,10 @@ export function ScraperTrigger() {
 
         window.dispatchEvent(new CustomEvent('scraper-job-added', { detail: newJob }));
 
-        toast.success(`Scraper iniciado con éxito en la nube de Apify (Run ID: ${res.data.runId})`);
+        toast.success(`Scraper lanzado en Apify Cloud con éxito (Run ID: ${res.data.runId})`);
         setOpen(false);
-        setQuery('');
       } else {
         toast.error(res.error || 'Ocurrió un error al iniciar la extracción.');
-      }
-    });
-  };
-
-  const handleManualIngestSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!manualDatasetId.trim()) {
-      toast.error('Por favor ingresa el Dataset ID de Apify.');
-      return;
-    }
-
-    startIngestTransition(async () => {
-      const res = await ingestManualDataset(manualDatasetId.trim());
-
-      if (res.success) {
-        toast.success(res.message || 'Ingesta manual del dataset iniciada correctamente.');
-        setOpen(false);
-        setManualDatasetId('');
-      } else {
-        toast.error(res.message || 'Error al iniciar la ingesta del dataset.');
       }
     });
   };
@@ -86,133 +99,185 @@ export function ScraperTrigger() {
           </Button>
         }
       />
-      <DialogContent className="bg-zinc-900 border-zinc-800 text-zinc-100 sm:max-w-md">
+      <DialogContent className="bg-zinc-900 border-zinc-800 text-zinc-100 sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold flex items-center gap-2 text-white">
             <Sparkles className="h-5 w-5 text-emerald-400" />
-            Extracción & Ingesta B2B
+            Configurar Extracción B2B de Prospectos
           </DialogTitle>
           <DialogDescription className="text-zinc-400 text-sm">
-            Lanza un scraper en la nube de Apify o ingresa manualmente un dataset existente.
+            Personaliza todos los parámetros de extracción para rascar Google Maps y enriquecer con Crawlee en segundo plano.
           </DialogDescription>
         </DialogHeader>
 
-        <Tabs defaultValue="extraction" className="w-full pt-2">
-          <TabsList className="grid w-full grid-cols-2 bg-zinc-950 border border-zinc-800">
-            <TabsTrigger value="extraction" className="data-[state=active]:bg-zinc-800 data-[state=active]:text-emerald-400 text-zinc-400 gap-1.5 text-xs">
-              <Bot className="h-3.5 w-3.5" /> Nueva Extracción
-            </TabsTrigger>
-            <TabsTrigger value="manual" className="data-[state=active]:bg-zinc-800 data-[state=active]:text-emerald-400 text-zinc-400 gap-1.5 text-xs">
-              <Database className="h-3.5 w-3.5" /> Ingesta Manual
-            </TabsTrigger>
-          </TabsList>
+        <form onSubmit={handleSubmit} className="space-y-5 pt-2">
+          {/* Término(s) de Búsqueda */}
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold text-zinc-200 flex items-center gap-1.5">
+              <Search className="h-3.5 w-3.5 text-emerald-400" />
+              Término(s) de Búsqueda / Nichos (separados por coma)
+            </Label>
+            <Input
+              placeholder="Ej: Odontólogos, Clínicas Dentales, Estética"
+              value={searchTerms}
+              onChange={(e) => setSearchTerms(e.target.value)}
+              disabled={isPending}
+              className="bg-zinc-950 border-zinc-800 text-zinc-100 placeholder:text-zinc-500 focus-visible:ring-emerald-500/50"
+            />
+            <p className="text-[11px] text-zinc-400">
+              Puedes ingresar varios nichos separados por coma para extraerlos simultáneamente.
+            </p>
+          </div>
 
-          {/* Pestaña 1: Nueva Extracción */}
-          <TabsContent value="extraction">
-            <form onSubmit={handleScraperSubmit} className="space-y-4 pt-2">
-              <div className="space-y-2">
-                <label className="text-xs font-semibold text-zinc-300">Término de Búsqueda / Nicho</label>
-                <Input
-                  placeholder="Ej: Odontólogos en Madrid, Restaurantes en Bogotá..."
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
+          {/* Ubicación y País */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold text-zinc-200 flex items-center gap-1.5">
+                <MapPin className="h-3.5 w-3.5 text-blue-400" />
+                Ubicación / Ciudad Específica
+              </Label>
+              <Input
+                placeholder="Ej: Bogotá, Madrid, Medellín..."
+                value={locationQuery}
+                onChange={(e) => setLocationQuery(e.target.value)}
+                disabled={isPending}
+                className="bg-zinc-950 border-zinc-800 text-zinc-100 placeholder:text-zinc-500"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold text-zinc-200 flex items-center gap-1.5">
+                <Globe2 className="h-3.5 w-3.5 text-indigo-400" />
+                País de Búsqueda
+              </Label>
+              <Select value={countryCode} onValueChange={(val) => setCountryCode(val || 'CO')} disabled={isPending}>
+                <SelectTrigger className="bg-zinc-950 border-zinc-800 text-zinc-100">
+                  <SelectValue placeholder="Seleccionar país" />
+                </SelectTrigger>
+                <SelectContent className="bg-zinc-900 border-zinc-800 text-zinc-200">
+                  <SelectItem value="CO">🇨🇴 Colombia (CO)</SelectItem>
+                  <SelectItem value="ES">🇪🇸 España (ES)</SelectItem>
+                  <SelectItem value="MX">🇲🇽 México (MX)</SelectItem>
+                  <SelectItem value="US">🇺🇸 Estados Unidos (US)</SelectItem>
+                  <SelectItem value="AR">🇦🇷 Argentina (AR)</SelectItem>
+                  <SelectItem value="CL">🇨🇱 Chile (CL)</SelectItem>
+                  <SelectItem value="PE">🇵🇪 Perú (PE)</SelectItem>
+                  <SelectItem value="EC">🇪🇨 Ecuador (EC)</SelectItem>
+                  <SelectItem value="ALL">🌐 Todos / Global</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Límite e Idioma */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold text-zinc-200">Límite por Búsqueda</Label>
+              <Input
+                type="number"
+                min={1}
+                max={1000}
+                value={limit}
+                onChange={(e) => setLimit(Number(e.target.value))}
+                disabled={isPending}
+                className="bg-zinc-950 border-zinc-800 text-zinc-100 font-mono text-sm"
+                required
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold text-zinc-200">Idioma de Resultados</Label>
+              <Select value={language} onValueChange={(val) => setLanguage(val || 'es')} disabled={isPending}>
+                <SelectTrigger className="bg-zinc-950 border-zinc-800 text-zinc-100">
+                  <SelectValue placeholder="Idioma" />
+                </SelectTrigger>
+                <SelectContent className="bg-zinc-900 border-zinc-800 text-zinc-200">
+                  <SelectItem value="es">Español (es)</SelectItem>
+                  <SelectItem value="en">Inglés (en)</SelectItem>
+                  <SelectItem value="pt">Portugués (pt)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Filtros y Opciones Avanzadas */}
+          <div className="space-y-3 pt-3 border-t border-zinc-800/80">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs font-semibold text-zinc-300 flex items-center gap-1.5">
+                <SlidersHorizontal className="h-3.5 w-3.5 text-amber-400" />
+                Opciones de Filtrado & Enriquecimiento
+              </span>
+            </div>
+
+            <div className="space-y-2.5 bg-zinc-950/60 p-3 rounded-lg border border-zinc-800/80">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="skip-closed" className="text-xs text-zinc-300 cursor-pointer">
+                  Omitir locales cerrados permanentemente
+                </Label>
+                <Switch
+                  id="skip-closed"
+                  checked={skipClosedPlaces}
+                  onCheckedChange={setSkipClosedPlaces}
                   disabled={isPending}
-                  className="bg-zinc-950 border-zinc-800 text-zinc-100 placeholder:text-zinc-500"
-                  required
                 />
               </div>
 
-              <div className="space-y-2">
-                <label className="text-xs font-semibold text-zinc-300">Límite Máximo de Prospectos</label>
-                <Input
-                  type="number"
-                  min={1}
-                  max={500}
-                  value={limit}
-                  onChange={(e) => setLimit(Number(e.target.value))}
+              <div className="flex items-center justify-between">
+                <Label htmlFor="scrape-website" className="text-xs text-zinc-300 cursor-pointer">
+                  Extraer dominio y sitio web
+                </Label>
+                <Switch
+                  id="scrape-website"
+                  checked={scrapeWebsite}
+                  onCheckedChange={setScrapeWebsite}
                   disabled={isPending}
-                  className="bg-zinc-950 border-zinc-800 text-zinc-100"
-                  required
                 />
               </div>
 
-              <div className="flex justify-end gap-2 pt-4 border-t border-zinc-800">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setOpen(false)}
+              <div className="flex items-center justify-between">
+                <Label htmlFor="scrape-contacts" className="text-xs text-zinc-300 cursor-pointer">
+                  Extraer emails y redes sociales
+                </Label>
+                <Switch
+                  id="scrape-contacts"
+                  checked={scrapeEmailsAndSocialMedia}
+                  onCheckedChange={setScrapeEmailsAndSocialMedia}
                   disabled={isPending}
-                  className="bg-zinc-950 border-zinc-800 text-zinc-300 hover:bg-zinc-800"
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={isPending}
-                  className="bg-emerald-600 hover:bg-emerald-500 text-white font-medium gap-2"
-                >
-                  {isPending ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Lanzando...
-                    </>
-                  ) : (
-                    'Iniciar Extracción'
-                  )}
-                </Button>
-              </div>
-            </form>
-          </TabsContent>
-
-          {/* Pestaña 2: Ingesta Manual */}
-          <TabsContent value="manual">
-            <form onSubmit={handleManualIngestSubmit} className="space-y-4 pt-2">
-              <div className="space-y-2">
-                <label className="text-xs font-semibold text-zinc-300">Dataset ID de Apify</label>
-                <Input
-                  placeholder="Ej: Rvbs1y1CtalhkhB8s, CWHn5JCFwXYDaTbjA..."
-                  value={manualDatasetId}
-                  onChange={(e) => setManualDatasetId(e.target.value)}
-                  disabled={isIngesting}
-                  className="bg-zinc-950 border-zinc-800 text-zinc-100 placeholder:text-zinc-500 font-mono text-xs"
-                  required
                 />
-                <p className="text-[11px] text-zinc-400">
-                  Copia el ID del Dataset desde tu consola de Apify para procesar e inyectar los prospectos a PostgreSQL en segundo plano.
-                </p>
               </div>
+            </div>
+          </div>
 
-              <div className="flex justify-end gap-2 pt-4 border-t border-zinc-800">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setOpen(false)}
-                  disabled={isIngesting}
-                  className="bg-zinc-950 border-zinc-800 text-zinc-300 hover:bg-zinc-800"
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={isIngesting}
-                  className="bg-emerald-600 hover:bg-emerald-500 text-white font-medium gap-2"
-                >
-                  {isIngesting ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Procesando...
-                    </>
-                  ) : (
-                    <>
-                      <Download className="h-4 w-4" />
-                      Ingresar Dataset
-                    </>
-                  )}
-                </Button>
-              </div>
-            </form>
-          </TabsContent>
-        </Tabs>
+          {/* Botones de Acción */}
+          <div className="flex justify-end gap-2 pt-4 border-t border-zinc-800">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setOpen(false)}
+              disabled={isPending}
+              className="bg-zinc-950 border-zinc-800 text-zinc-300 hover:bg-zinc-800"
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="submit"
+              disabled={isPending}
+              className="bg-emerald-600 hover:bg-emerald-500 text-white font-medium gap-2 px-5"
+            >
+              {isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Lanzando Scraper...
+                </>
+              ) : (
+                <>
+                  <Bot className="h-4 w-4" />
+                  Iniciar Extracción
+                </>
+              )}
+            </Button>
+          </div>
+        </form>
       </DialogContent>
     </Dialog>
   );
