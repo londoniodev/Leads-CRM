@@ -21,7 +21,7 @@ export async function triggerGoogleMapsScraper(query: string, limit: number = 50
     }
 
     const processorWebhookUrl = process.env.PROCESSOR_WEBHOOK_URL;
-    const secretToken = process.env.WEBHOOK_SECRET_TOKEN || 'dev_secret_token_123';
+    const secretToken = process.env.WEBHOOK_SECRET_TOKEN || 'xX6+0+EuTlUynI/USQli6I14OgrVg3dAqnrzTkuOV8w=';
 
     console.log(`[ApifyTrigger] Solicitud recibida: query="${query.trim()}", limit=${limit}`);
     console.log(`[ApifyTrigger] Webhook URL configurada: "${processorWebhookUrl || 'NINGUNA (PROCESSOR_WEBHOOK_URL no definida)'}"`);
