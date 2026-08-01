@@ -2,12 +2,48 @@
 
 import apifyClient from '@/lib/apify';
 
-export async function triggerGoogleMapsScraper(query: string, limit: number = 50) {
+export interface ScraperInputOptions {
+  searchStringsArray?: string[]; // Array de términos de búsqueda ("Restaurantes", "Clínicas")
+  query?: string; // Búsqueda por término único ("Odontólogos en Madrid")
+  locationQuery?: string; // Filtro de ubicación ("Madrid, España")
+  maxCrawledPlacesPerSearch?: number; // Límite por búsqueda (default 50)
+  limit?: number; // Alias de maxCrawledPlacesPerSearch
+  language?: string; // Idioma ("es", "en", "pt")
+  countryCode?: string; // Código de país ("es", "co", "mx", "us")
+  skipClosedPlaces?: boolean; // Omitir negocios cerrados permanentemente (default true)
+  scrapeWebsite?: boolean; // Extraer sitio web (default true)
+  scrapeEmailsAndSocialMedia?: boolean; // Extraer emails y redes (default true)
+}
+
+/**
+ * Server Action para lanzar la extracción B2B en la nube de Apify (compass/crawler-google-places).
+ * Soporta invocación por string ("Restaurantes en Bogotá", 50) o por objeto rico ScraperInputOptions.
+ */
+export async function triggerGoogleMapsScraper(
+  queryOrOptions: string | ScraperInputOptions,
+  legacyLimit: number = 50
+) {
   try {
-    if (!query || query.trim().length === 0) {
+    let options: ScraperInputOptions = {};
+
+    if (typeof queryOrOptions === 'string') {
+      options = {
+        query: queryOrOptions,
+        limit: legacyLimit,
+      };
+    } else if (typeof queryOrOptions === 'object' && queryOrOptions !== null) {
+      options = queryOrOptions;
+    }
+
+    // Normalizar términos de búsqueda
+    const searchStrings = options.searchStringsArray && options.searchStringsArray.length > 0
+      ? options.searchStringsArray
+      : options.query ? [options.query.trim()] : [];
+
+    if (searchStrings.length === 0 && !options.locationQuery) {
       return {
         success: false,
-        error: 'El término de búsqueda es obligatorio.',
+        error: 'Debes proporcionar al menos un término de búsqueda o una ubicación.',
       };
     }
 
@@ -23,14 +59,26 @@ export async function triggerGoogleMapsScraper(query: string, limit: number = 50
     const processorWebhookUrl = process.env.PROCESSOR_WEBHOOK_URL;
     const secretToken = process.env.WEBHOOK_SECRET_TOKEN || 'xX6+0+EuTlUynI/USQli6I14OgrVg3dAqnrzTkuOV8w=';
 
-    console.log(`[ApifyTrigger] Solicitud recibida: query="${query.trim()}", limit=${limit}`);
-    console.log(`[ApifyTrigger] Webhook URL configurada: "${processorWebhookUrl || 'NINGUNA (PROCESSOR_WEBHOOK_URL no definida)'}"`);
+    console.log(`[ApifyTrigger] Solicitud recibida: searchStrings=${JSON.stringify(searchStrings)}, location="${options.locationQuery || ''}"`);
 
-    const webhooks = processorWebhookUrl
+    if (!processorWebhookUrl) {
+      console.warn('⚠️ [ApifyTrigger] ALERTA CRÍTICA: PROCESSOR_WEBHOOK_URL no está configurada en las variables de entorno del CRM en Dokploy!');
+      console.warn('   La extracción en Apify arrancará, pero Apify NO sabrá a qué URL enviar los datos al terminar.');
+      console.warn('   Configura PROCESSOR_WEBHOOK_URL="http://TU_HOST_DOKPLOY:3000/webhooks/apify/leads" en el .env del CRM.');
+    }
+
+    // Asegurar que la URL del Webhook lleve el token tanto en Header como en Query Parameter para máxima compatibilidad
+    let formattedWebhookUrl = processorWebhookUrl;
+    if (formattedWebhookUrl && !formattedWebhookUrl.includes('secret=')) {
+      const separator = formattedWebhookUrl.includes('?') ? '&' : '?';
+      formattedWebhookUrl = `${formattedWebhookUrl}${separator}secret=${encodeURIComponent(secretToken)}`;
+    }
+
+    const webhooks = formattedWebhookUrl
       ? [
           {
             eventTypes: ['ACTOR.RUN.SUCCEEDED' as any],
-            requestUrl: processorWebhookUrl,
+            requestUrl: formattedWebhookUrl,
             headersTemplate: JSON.stringify({
               'x-webhook-secret': secretToken,
             }),
@@ -38,12 +86,22 @@ export async function triggerGoogleMapsScraper(query: string, limit: number = 50
         ]
       : undefined;
 
-    // Iniciar ejecución asíncrona no bloqueante usando .start() con webhook ACTOR.RUN.SUCCEEDED y autenticación secret header
+    // Configurar payload completo para compass/crawler-google-places
+    const apifyInput = {
+      searchStringsArray: searchStrings.length > 0 ? searchStrings : undefined,
+      locationQuery: options.locationQuery || undefined,
+      maxCrawledPlacesPerSearch: Math.max(1, options.maxCrawledPlacesPerSearch || options.limit || 50),
+      language: options.language || 'es',
+      countryCode: options.countryCode ? options.countryCode.toLowerCase() : undefined,
+      skipClosedPlaces: options.skipClosedPlaces ?? true,
+      scrapeWebsite: options.scrapeWebsite ?? true,
+      scrapeEmailsAndSocialMedia: options.scrapeEmailsAndSocialMedia ?? true,
+      oneReviewPerKey: false,
+    };
+
+    // Iniciar ejecución asíncrona no bloqueante en Apify Cloud
     const run = await apifyClient.actor('compass/crawler-google-places').start(
-      {
-        searchStringsArray: [query.trim()],
-        maxCrawledPlacesPerSearch: Math.max(1, limit),
-      },
+      apifyInput,
       {
         webhooks,
       }
