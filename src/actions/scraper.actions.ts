@@ -139,10 +139,8 @@ export async function triggerGoogleMapsScraper(
         console.log(`[ScraperRouter] 🎵 Ejecutando clockworks/tiktok-scraper para term="${searchTermsString}" (Limit: ${limitValue})`);
 
         const tiktokInput = {
-          type: 'search',
-          keyword: searchTermsString,
-          searchType: 'user',
-          maxResults: limitValue,
+          searchQueries: searchStrings,
+          resultsPerPage: limitValue,
         };
 
         const run = await apifyClient.actor('clockworks/tiktok-scraper').start(

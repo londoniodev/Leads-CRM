@@ -227,6 +227,26 @@ export default async function LeadDetailPage({ params }: PageProps) {
                     {locationStr || 'No especificada'}
                   </p>
                 </div>
+
+                {lead.rating !== null && lead.rating !== undefined && (
+                  <div className="bg-zinc-950/60 p-4 rounded-xl border border-zinc-800/80 space-y-1">
+                    <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider flex items-center gap-1.5">
+                      <Sparkles className="h-3.5 w-3.5 text-amber-400" /> Rating Google Maps
+                    </span>
+                    <p className="text-sm text-zinc-200 pt-1 font-semibold">
+                      ⭐ {lead.rating.toFixed(1)} {lead.reviewsCount !== null && lead.reviewsCount !== undefined && <span className="text-zinc-400 font-normal">({lead.reviewsCount.toLocaleString('es-ES')} reseñas)</span>}
+                    </p>
+                  </div>
+                )}
+
+                {lead.googleCategory && (
+                  <div className="bg-zinc-950/60 p-4 rounded-xl border border-zinc-800/80 space-y-1">
+                    <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider flex items-center gap-1.5">
+                      <Layers className="h-3.5 w-3.5 text-cyan-400" /> Categoría Google
+                    </span>
+                    <p className="text-sm text-zinc-300 pt-1">{lead.googleCategory}</p>
+                  </div>
+                )}
               </div>
 
               {/* Hash y Trazabilidad */}
@@ -355,7 +375,7 @@ export default async function LeadDetailPage({ params }: PageProps) {
 
                   <div className="space-y-1">
                     <a
-                      href={profile.url}
+                      href={profile.username ? `https://${profile.platform === 'TIKTOK' ? 'tiktok.com/@' : profile.platform === 'INSTAGRAM' ? 'instagram.com/' : profile.platform.toLowerCase() + '.com/'}${profile.username}` : profile.url}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-xs font-medium text-purple-400 hover:underline flex items-center gap-1 truncate"
