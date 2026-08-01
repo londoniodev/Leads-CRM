@@ -3,15 +3,15 @@
 import apifyClient from '@/lib/apify';
 
 export interface ScraperInputOptions {
-  searchStringsArray?: string[]; // Array de términos de búsqueda ("Restaurantes", "Clínicas")
-  query?: string; // Búsqueda por término único ("Odontólogos en Madrid")
-  locationQuery?: string; // Filtro de ubicación ("Madrid, España")
+  searchStringsArray?: string[];      // Múltiples palabras clave (ej: ["Restaurantes", "Bares"])
+  query?: string;                     // Búsqueda por término único ("Odontólogos en Madrid")
+  locationQuery?: string;             // Filtro de ubicación ("Madrid, España")
   maxCrawledPlacesPerSearch?: number; // Límite por búsqueda (default 50)
-  limit?: number; // Alias de maxCrawledPlacesPerSearch
-  language?: string; // Idioma ("es", "en", "pt")
-  countryCode?: string; // Código de país ("es", "co", "mx", "us")
-  skipClosedPlaces?: boolean; // Omitir negocios cerrados permanentemente (default true)
-  scrapeWebsite?: boolean; // Extraer sitio web (default true)
+  limit?: number;                     // Alias de maxCrawledPlacesPerSearch
+  language?: string;                  // Idioma ("es", "en", "pt")
+  countryCode?: string;               // Código de país ("es", "co", "mx", "us")
+  skipClosedPlaces?: boolean;         // Omitir negocios cerrados permanentemente (default true)
+  scrapeWebsite?: boolean;            // Extraer sitio web (default true)
   scrapeEmailsAndSocialMedia?: boolean; // Extraer emails y redes (default true)
 }
 
@@ -63,11 +63,9 @@ export async function triggerGoogleMapsScraper(
 
     if (!processorWebhookUrl) {
       console.warn('⚠️ [ApifyTrigger] ALERTA CRÍTICA: PROCESSOR_WEBHOOK_URL no está configurada en las variables de entorno del CRM en Dokploy!');
-      console.warn('   La extracción en Apify arrancará, pero Apify NO sabrá a qué URL enviar los datos al terminar.');
-      console.warn('   Configura PROCESSOR_WEBHOOK_URL="http://TU_HOST_DOKPLOY:3000/webhooks/apify/leads" en el .env del CRM.');
     }
 
-    // Asegurar que la URL del Webhook lleve el token tanto en Header como en Query Parameter para máxima compatibilidad
+    // Formatear la URL del Webhook incluyendo la clave secreta por Query Parameter (?secret=...)
     let formattedWebhookUrl = processorWebhookUrl;
     if (formattedWebhookUrl && !formattedWebhookUrl.includes('secret=')) {
       const separator = formattedWebhookUrl.includes('?') ? '&' : '?';
@@ -79,9 +77,6 @@ export async function triggerGoogleMapsScraper(
           {
             eventTypes: ['ACTOR.RUN.SUCCEEDED' as any],
             requestUrl: formattedWebhookUrl,
-            headersTemplate: JSON.stringify({
-              'x-webhook-secret': secretToken,
-            }),
           },
         ]
       : undefined;
@@ -107,7 +102,7 @@ export async function triggerGoogleMapsScraper(
       }
     );
 
-    console.log(`[ApifyTrigger] Actor iniciado en Apify Cloud con éxito. Run ID: ${run.id}, Status: ${run.status}`);
+    console.log(`[ApifyTrigger] Actor iniciado en Apify Cloud con éxito. Run ID: ${run.id}, Status: ${run.status}, Dataset ID: ${run.defaultDatasetId}`);
 
     return {
       success: true,
