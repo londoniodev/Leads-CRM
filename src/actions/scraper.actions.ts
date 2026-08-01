@@ -13,13 +13,17 @@ export async function triggerGoogleMapsScraper(query: string, limit: number = 50
 
     const token = process.env.APIFY_API_TOKEN;
     if (!token) {
+      console.error('[ApifyTrigger] APIFY_API_TOKEN no configurado en variables de entorno.');
       return {
         success: false,
-        error: 'Falta configurar APIFY_API_TOKEN en las variables de entorno.',
+        error: 'Falta configurar APIFY_API_TOKEN en las variables de entorno de Dokploy.',
       };
     }
 
     const processorWebhookUrl = process.env.PROCESSOR_WEBHOOK_URL;
+    console.log(`[ApifyTrigger] Solicitud recibida: query="${query.trim()}", limit=${limit}`);
+    console.log(`[ApifyTrigger] Webhook URL configurada: "${processorWebhookUrl || 'NINGUNA (PROCESSOR_WEBHOOK_URL no definida)'}"`);
+
     const webhooks = processorWebhookUrl
       ? [
           {
@@ -40,6 +44,8 @@ export async function triggerGoogleMapsScraper(query: string, limit: number = 50
       }
     );
 
+    console.log(`[ApifyTrigger] Actor iniciado en Apify Cloud con éxito. Run ID: ${run.id}, Status: ${run.status}`);
+
     return {
       success: true,
       data: {
@@ -49,7 +55,7 @@ export async function triggerGoogleMapsScraper(query: string, limit: number = 50
       },
     };
   } catch (error: any) {
-    console.error('Error al iniciar el actor de Apify:', error?.message || error);
+    console.error('[ApifyTrigger] Error al iniciar el actor de Apify:', error?.message || error);
     return {
       success: false,
       error: error?.message || 'Error al iniciar la extracción en la nube de Apify.',
