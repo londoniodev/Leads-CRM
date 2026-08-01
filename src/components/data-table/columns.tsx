@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { updateLeadStatus } from '@/actions/lead.actions';
 import Link from 'next/link';
-import { MoreHorizontal, ExternalLink, Globe, Phone, Mail, CheckCircle2, Clock, XCircle, Sparkles, Eye } from 'lucide-react';
+import { MoreHorizontal, ExternalLink, Globe, Phone, Mail, CheckCircle2, Clock, XCircle, Sparkles, Eye, Share2 } from 'lucide-react';
 import { useTransition } from 'react';
 
 // Extender el tipo de Lead para incluir relaciones opcionales
@@ -39,10 +39,10 @@ function ActionsCell({ lead }: { lead: LeadWithRelations }) {
         <span className="sr-only">Abrir menú</span>
         <MoreHorizontal className="h-4 w-4" />
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="bg-zinc-900 border-zinc-800 text-zinc-200 w-48">
+      <DropdownMenuContent align="end" className="bg-zinc-900 border-zinc-800 text-zinc-200 w-48 font-sans">
         <DropdownMenuLabel className="text-zinc-400 text-xs font-semibold">Navegación</DropdownMenuLabel>
         <DropdownMenuItem className="hover:bg-zinc-800 cursor-pointer text-zinc-200 p-0">
-          <Link href={`/leads/${lead.id}`} className="flex items-center gap-2 w-full px-1.5 py-1">
+          <Link href={`/leads/${lead.id}`} className="flex items-center gap-2 w-full px-1.5 py-1 text-xs font-medium">
             <Eye className="h-3.5 w-3.5 text-emerald-400" /> Ver Detalle
           </Link>
         </DropdownMenuItem>
@@ -51,25 +51,25 @@ function ActionsCell({ lead }: { lead: LeadWithRelations }) {
         <DropdownMenuSeparator className="bg-zinc-800" />
         <DropdownMenuItem
           onClick={() => handleStatusChange(LeadStatus.ENRICHED)}
-          className="hover:bg-zinc-800 cursor-pointer flex items-center gap-2 text-emerald-400"
+          className="hover:bg-zinc-800 cursor-pointer flex items-center gap-2 text-emerald-400 text-xs"
         >
           <CheckCircle2 className="h-3.5 w-3.5" /> Marcar ENRICHED
         </DropdownMenuItem>
         <DropdownMenuItem
           onClick={() => handleStatusChange(LeadStatus.QUALIFIED)}
-          className="hover:bg-zinc-800 cursor-pointer flex items-center gap-2 text-blue-400"
+          className="hover:bg-zinc-800 cursor-pointer flex items-center gap-2 text-blue-400 text-xs"
         >
           <Sparkles className="h-3.5 w-3.5" /> Marcar QUALIFIED
         </DropdownMenuItem>
         <DropdownMenuItem
           onClick={() => handleStatusChange(LeadStatus.NEW)}
-          className="hover:bg-zinc-800 cursor-pointer flex items-center gap-2 text-zinc-300"
+          className="hover:bg-zinc-800 cursor-pointer flex items-center gap-2 text-zinc-300 text-xs"
         >
           <Clock className="h-3.5 w-3.5 text-zinc-400" /> Marcar NEW
         </DropdownMenuItem>
         <DropdownMenuItem
           onClick={() => handleStatusChange(LeadStatus.REJECTED)}
-          className="hover:bg-zinc-800 cursor-pointer flex items-center gap-2 text-rose-400"
+          className="hover:bg-zinc-800 cursor-pointer flex items-center gap-2 text-rose-400 text-xs"
         >
           <XCircle className="h-3.5 w-3.5" /> Marcar REJECTED
         </DropdownMenuItem>
@@ -111,6 +111,17 @@ export const columns: ColumnDef<LeadWithRelations>[] = [
       const website = row.original.website;
       const leadId = row.original.id;
 
+      const isSocialDomain = website && [
+        'instagram.com',
+        'facebook.com',
+        'fb.com',
+        'linkedin.com',
+        'twitter.com',
+        'x.com',
+        'tiktok.com',
+        'google.com',
+      ].some((domain) => website.toLowerCase().includes(domain));
+
       return (
         <div className="flex flex-col">
           <Link href={`/leads/${leadId}`} className="font-semibold text-zinc-100 hover:text-emerald-400 transition-colors">
@@ -121,10 +132,12 @@ export const columns: ColumnDef<LeadWithRelations>[] = [
               href={website}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-xs text-blue-400 hover:underline flex items-center gap-1 mt-0.5 truncate max-w-[220px]"
+              className={`text-xs flex items-center gap-1 mt-0.5 truncate max-w-[220px] hover:underline ${
+                isSocialDomain ? 'text-purple-400' : 'text-blue-400'
+              }`}
             >
-              <Globe className="h-3 w-3" />
-              {website.replace(/^https?:\/\//, '')}
+              {isSocialDomain ? <Share2 className="h-3 w-3" /> : <Globe className="h-3 w-3" />}
+              {isSocialDomain ? 'Perfil Social' : website.replace(/^https?:\/\//, '')}
               <ExternalLink className="h-2.5 w-2.5 opacity-70" />
             </a>
           ) : (
