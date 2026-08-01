@@ -13,6 +13,9 @@ export interface ScraperInputOptions {
   skipClosedPlaces?: boolean;         // Omitir negocios cerrados permanentemente (default true)
   scrapeWebsite?: boolean;            // Extraer sitio web (default true)
   scrapeEmailsAndSocialMedia?: boolean; // Extraer emails y redes (default true)
+  minRating?: number;                 // Calificación mínima en estrellas (ej. 3.0, 4.0, 4.5)
+  onlyWithWebsite?: boolean;          // Solo extraer sitios con página web oficial
+  enrichSocial?: boolean;             // Forzar enriquecimiento profundo de perfiles en Instagram/TikTok
 }
 
 /**
@@ -21,7 +24,6 @@ export interface ScraperInputOptions {
 function cleanUrlString(rawUrl?: string): string | undefined {
   if (!rawUrl || typeof rawUrl !== 'string') return undefined;
 
-  // Extraer la primera URL http(s) válida e ignorar corchetes markdown
   const match = rawUrl.match(/https?:\/\/[^\s\]\)"']+/i);
   if (match) {
     return match[0].trim();
@@ -107,6 +109,8 @@ export async function triggerGoogleMapsScraper(
       skipClosedPlaces: options.skipClosedPlaces ?? true,
       scrapeWebsite: options.scrapeWebsite ?? true,
       scrapeEmailsAndSocialMedia: options.scrapeEmailsAndSocialMedia ?? true,
+      minRating: typeof options.minRating === 'number' && options.minRating > 0 ? options.minRating : undefined,
+      onlyWithWebsite: options.onlyWithWebsite ?? false,
       oneReviewPerKey: false,
     };
 

@@ -13,7 +13,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { ScraperInputOptions } from '@/actions/scraper.actions';
-import { Bot, Loader2, MapPin, Globe2, SlidersHorizontal, Search } from 'lucide-react';
+import { Bot, Loader2, MapPin, Globe2, SlidersHorizontal, Search, Star, Share2 } from 'lucide-react';
 
 export interface ScraperDrawerFormProps {
   onSubmit: (options: ScraperInputOptions, displayQuery: string) => void;
@@ -34,10 +34,13 @@ export function ScraperDrawerForm({
   const [countryCode, setCountryCode] = React.useState('CO');
   const [language, setLanguage] = React.useState('es');
   const [limit, setLimit] = React.useState(50);
+  const [minRating, setMinRating] = React.useState('0');
   
   const [skipClosedPlaces, setSkipClosedPlaces] = React.useState(true);
   const [scrapeWebsite, setScrapeWebsite] = React.useState(true);
+  const [onlyWithWebsite, setOnlyWithWebsite] = React.useState(false);
   const [scrapeEmailsAndSocialMedia, setScrapeEmailsAndSocialMedia] = React.useState(true);
+  const [enrichSocial, setEnrichSocial] = React.useState(true);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,14 +61,17 @@ export function ScraperDrawerForm({
       maxCrawledPlacesPerSearch: Number(limit) || 50,
       skipClosedPlaces,
       scrapeWebsite,
+      onlyWithWebsite,
       scrapeEmailsAndSocialMedia,
+      minRating: Number(minRating) > 0 ? Number(minRating) : undefined,
+      enrichSocial,
     };
 
     onSubmit(payload, displayQuery);
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5 font-sans">
+    <form onSubmit={handleSubmit} className="space-y-4 font-sans text-zinc-100">
       {/* Términos de Búsqueda */}
       <div className="space-y-1.5">
         <Label className="text-xs font-semibold text-zinc-200 flex items-center gap-1.5">
@@ -105,7 +111,7 @@ export function ScraperDrawerForm({
             <Globe2 className="h-3.5 w-3.5 text-indigo-400" />
             País de Búsqueda
           </Label>
-          <Select value={countryCode} onValueChange={(val) => setCountryCode(val || 'CO')} disabled={isPending}>
+          <Select value={countryCode} onValueChange={(val) => { if (val) setCountryCode(val); }} disabled={isPending}>
             <SelectTrigger className="bg-zinc-950 border-zinc-800 text-zinc-100">
               <SelectValue placeholder="Seleccionar país" />
             </SelectTrigger>
@@ -124,7 +130,7 @@ export function ScraperDrawerForm({
         </div>
       </div>
 
-      {/* Límite e Idioma */}
+      {/* Límite y Calificación Mínima */}
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
           <Label className="text-xs font-semibold text-zinc-200">Límite</Label>
@@ -141,15 +147,19 @@ export function ScraperDrawerForm({
         </div>
 
         <div className="space-y-1.5">
-          <Label className="text-xs font-semibold text-zinc-200">Idioma</Label>
-          <Select value={language} onValueChange={(val) => setLanguage(val || 'es')} disabled={isPending}>
+          <Label className="text-xs font-semibold text-zinc-200 flex items-center gap-1">
+            <Star className="h-3 w-3 text-amber-400 fill-amber-400" />
+            Min Rating
+          </Label>
+          <Select value={minRating} onValueChange={(val) => { if (val) setMinRating(val); }} disabled={isPending}>
             <SelectTrigger className="bg-zinc-950 border-zinc-800 text-zinc-100">
-              <SelectValue placeholder="Idioma" />
+              <SelectValue placeholder="Rating" />
             </SelectTrigger>
             <SelectContent className="bg-zinc-900 border-zinc-800 text-zinc-200">
-              <SelectItem value="es">Español (es)</SelectItem>
-              <SelectItem value="en">Inglés (en)</SelectItem>
-              <SelectItem value="pt">Portugués (pt)</SelectItem>
+              <SelectItem value="0">Todas (0+ ⭐)</SelectItem>
+              <SelectItem value="3.0">3.0+ ⭐</SelectItem>
+              <SelectItem value="4.0">4.0+ ⭐</SelectItem>
+              <SelectItem value="4.5">4.5+ ⭐</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -159,10 +169,10 @@ export function ScraperDrawerForm({
       <div className="space-y-3 pt-3 border-t border-zinc-800/80">
         <span className="text-xs font-semibold text-zinc-300 flex items-center gap-1.5">
           <SlidersHorizontal className="h-3.5 w-3.5 text-amber-400" />
-          Filtros de Extracción
+          Filtros & Enriquecimiento Avanzado
         </span>
 
-        <div className="space-y-3 bg-zinc-950/60 p-3 rounded-lg border border-zinc-800/80">
+        <div className="space-y-3 bg-zinc-950/80 p-3 rounded-lg border border-zinc-800/90">
           <div className="flex items-center justify-between">
             <Label htmlFor="skip-closed-drawer" className="text-xs text-zinc-300 cursor-pointer">
               Omitir cerrados
@@ -176,25 +186,26 @@ export function ScraperDrawerForm({
           </div>
 
           <div className="flex items-center justify-between">
-            <Label htmlFor="scrape-website-drawer" className="text-xs text-zinc-300 cursor-pointer">
-              Extraer sitio web
+            <Label htmlFor="only-website-drawer" className="text-xs text-zinc-300 cursor-pointer flex items-center gap-1">
+              Solo con sitio web
             </Label>
             <Switch
-              id="scrape-website-drawer"
-              checked={scrapeWebsite}
-              onCheckedChange={setScrapeWebsite}
+              id="only-website-drawer"
+              checked={onlyWithWebsite}
+              onCheckedChange={setOnlyWithWebsite}
               disabled={isPending}
             />
           </div>
 
           <div className="flex items-center justify-between">
-            <Label htmlFor="scrape-contacts-drawer" className="text-xs text-zinc-300 cursor-pointer">
-              Extraer emails/redes
+            <Label htmlFor="enrich-social-drawer" className="text-xs text-zinc-300 cursor-pointer flex items-center gap-1.5">
+              <Share2 className="h-3 w-3 text-purple-400" />
+              Enriquecer Redes (Instagram/TikTok)
             </Label>
             <Switch
-              id="scrape-contacts-drawer"
-              checked={scrapeEmailsAndSocialMedia}
-              onCheckedChange={setScrapeEmailsAndSocialMedia}
+              id="enrich-social-drawer"
+              checked={enrichSocial}
+              onCheckedChange={setEnrichSocial}
               disabled={isPending}
             />
           </div>
