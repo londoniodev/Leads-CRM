@@ -13,13 +13,26 @@ export async function triggerGoogleMapsScraper(query: string, limit: number = 50
 
     const token = process.env.APIFY_API_TOKEN;
     if (!token) {
-      console.warn('APIFY_API_TOKEN no está definido en las variables de entorno.');
+      return {
+        success: false,
+        error: 'Falta configurar APIFY_API_TOKEN en las variables de entorno.',
+      };
     }
 
-    const run = await apifyClient.actor('compass/google-maps-scraper').call({
-      searchStringsArray: [query.trim()],
-      maxCrawledPlacesPerSearch: Math.max(1, limit),
-    });
+    let run;
+    try {
+      // Intentar primero con el actor principal de Apify Google Maps
+      run = await apifyClient.actor('apify/google-maps-scraper').call({
+        searchStringsArray: [query.trim()],
+        maxCrawledPlacesPerSearch: Math.max(1, limit),
+      });
+    } catch (actorErr: any) {
+      console.warn('Actor apify/google-maps-scraper no disponible, probando compass/crawler-google-places...');
+      run = await apifyClient.actor('compass/crawler-google-places').call({
+        searchStringsArray: [query.trim()],
+        maxCrawledPlacesPerSearch: Math.max(1, limit),
+      });
+    }
 
     return {
       success: true,

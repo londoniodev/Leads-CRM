@@ -1,26 +1,49 @@
-# Imagen base oficial Node.js v20 Alpine
-FROM node:20-alpine
+# Multi-stage Dockerfile optimizado para Next.js 16 + Prisma ORM + Alpine en Dokploy
 
-# Directorio de trabajo
+# --- Etapa 1: Instalación de Dependencias ---
+FROM node:20-alpine AS deps
+RUN apk add --no-cache openssl libc6-compat
 WORKDIR /app
 
-# Copiar manifiesto de dependencias
-COPY package*.json ./
+COPY package.json package-lock.json ./
+COPY prisma ./prisma/
 
-# Instalar dependencias
 RUN npm ci
-
-# Copiar el proyecto completo
-COPY . .
-
-# Generar cliente de Prisma
 RUN npx prisma generate
 
-# Compilar aplicación Next.js para producción
+# --- Etapa 2: Compilación (Builder) ---
+FROM node:20-alpine AS builder
+RUN apk add --no-cache openssl libc6-compat
+WORKDIR /app
+
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+
 RUN npm run build
 
-# Exponer el puerto por defecto de Next.js
+# --- Etapa 3: Ejecución de Producción (Runner) ---
+FROM node:20-alpine AS runner
+RUN apk add --no-cache openssl libc6-compat
+WORKDIR /app
+
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
+
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
+
+COPY --from=builder /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --from=builder /app/prisma ./prisma
+
+USER nextjs
+
 EXPOSE 3000
 
-# Comando de inicio predeterminado
-CMD ["npm", "start"]
+CMD ["node", "server.js"]
