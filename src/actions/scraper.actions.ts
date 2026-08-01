@@ -147,3 +147,52 @@ export async function getScraperRunStatus(runId: string) {
     };
   }
 }
+
+/**
+ * Server Action para solicitar al backend la ingesta manual de un Dataset de Apify por su ID.
+ */
+export async function ingestManualDataset(datasetId: string) {
+  try {
+    if (!datasetId || datasetId.trim().length === 0) {
+      return {
+        success: false,
+        message: 'El Dataset ID es obligatorio.',
+      };
+    }
+
+    const backendUrl = process.env.BACKEND_API_URL || process.env.PROCESSOR_WEBHOOK_URL?.replace(/\/webhooks\/apify\/leads.*$/, '') || 'http://72.62.161.199:3001';
+
+    console.log(`[ManualIngest] Enviando petición a ${backendUrl}/api/datasets/process con datasetId="${datasetId.trim()}"`);
+
+    const response = await fetch(`${backendUrl}/api/datasets/process`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        datasetId: datasetId.trim(),
+      }),
+      cache: 'no-store',
+    });
+
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      return {
+        success: false,
+        message: data.error || data.message || `Error del servidor backend (HTTP ${response.status}).`,
+      };
+    }
+
+    return {
+      success: true,
+      message: data.message || 'Ingesta manual del dataset iniciada correctamente en segundo plano.',
+    };
+  } catch (error: any) {
+    console.error('[ManualIngest] Error de conexión con el backend:', error?.message || error);
+    return {
+      success: false,
+      message: `Error al conectar con el backend: ${error?.message || 'Error de red.'}`,
+    };
+  }
+}
