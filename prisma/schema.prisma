@@ -4,19 +4,18 @@ datasource db {
 }
 
 generator client {
-  provider      = "prisma-client-js"
-  binaryTargets = ["native", "linux-musl-openssl-3.0.x", "linux-musl"]
+  provider = "prisma-client-js"
 }
 
 model Lead {
   id            String          @id @default(uuid())
-  leadHash      String          @unique
+  leadHash      String          @unique // Hash determinista md5(website | phoneE164)
   companyName   String
   niche         String
   city          String?
   country       String?
   address       String?
-  website       String?         
+  website       String?         // NO usar @unique
   phoneE164     String?         
   primaryEmail  String?
   status        LeadStatus      @default(NEW)
@@ -40,16 +39,26 @@ model SocialProfile {
   bio         String?
   emailInBio  String?
   verified    Boolean  @default(false)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([leadId, platform])
+  @@index([platform, username])
 }
 
 model ContactPerson {
-  id       String  @id @default(uuid())
-  leadId   String
-  lead     Lead    @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  name     String?
-  role     String? 
-  email    String?
-  phone    String?
+  id          String   @id @default(uuid())
+  leadId      String
+  lead        Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  name        String?
+  role        String? 
+  email       String?
+  phone       String?
+  linkedinUrl String?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 enum Platform {
