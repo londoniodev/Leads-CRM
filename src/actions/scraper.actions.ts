@@ -21,6 +21,8 @@ export async function triggerGoogleMapsScraper(query: string, limit: number = 50
     }
 
     const processorWebhookUrl = process.env.PROCESSOR_WEBHOOK_URL;
+    const secretToken = process.env.WEBHOOK_SECRET_TOKEN || 'dev_secret_token_123';
+
     console.log(`[ApifyTrigger] Solicitud recibida: query="${query.trim()}", limit=${limit}`);
     console.log(`[ApifyTrigger] Webhook URL configurada: "${processorWebhookUrl || 'NINGUNA (PROCESSOR_WEBHOOK_URL no definida)'}"`);
 
@@ -29,11 +31,14 @@ export async function triggerGoogleMapsScraper(query: string, limit: number = 50
           {
             eventTypes: ['ACTOR.RUN.SUCCEEDED' as any],
             requestUrl: processorWebhookUrl,
+            headersTemplate: JSON.stringify({
+              'x-webhook-secret': secretToken,
+            }),
           },
         ]
       : undefined;
 
-    // Iniciar ejecución asíncrona no bloqueante usando .start() con webhook ACTOR.RUN.SUCCEEDED
+    // Iniciar ejecución asíncrona no bloqueante usando .start() con webhook ACTOR.RUN.SUCCEEDED y autenticación secret header
     const run = await apifyClient.actor('compass/crawler-google-places').start(
       {
         searchStringsArray: [query.trim()],
