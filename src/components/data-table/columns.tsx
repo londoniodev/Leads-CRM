@@ -3,6 +3,7 @@
 import { ColumnDef } from '@tanstack/react-table';
 import { Lead, LeadStatus, SocialProfile, ContactPerson } from '@prisma/client';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -78,6 +79,30 @@ function ActionsCell({ lead }: { lead: LeadWithRelations }) {
 }
 
 export const columns: ColumnDef<LeadWithRelations>[] = [
+  {
+    id: 'select',
+    header: ({ table }) => (
+      <Checkbox
+        checked={
+          table.getIsAllPageRowsSelected() ||
+          (table.getIsSomePageRowsSelected() && 'indeterminate')
+        }
+        onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+        aria-label="Seleccionar todos los elementos de la página"
+        className="translate-y-[2px]"
+      />
+    ),
+    cell: ({ row }) => (
+      <Checkbox
+        checked={row.getIsSelected()}
+        onCheckedChange={(value) => row.toggleSelected(!!value)}
+        aria-label="Seleccionar fila"
+        className="translate-y-[2px]"
+      />
+    ),
+    enableSorting: false,
+    enableHiding: false,
+  },
   {
     accessorKey: 'companyName',
     header: 'Empresa / Sitio Web',
@@ -193,6 +218,10 @@ export const columns: ColumnDef<LeadWithRelations>[] = [
           {status}
         </Badge>
       );
+    },
+    filterFn: (row, id, value: string[]) => {
+      if (!value || (Array.isArray(value) && value.length === 0)) return true;
+      return value.includes(row.getValue(id));
     },
   },
   {
