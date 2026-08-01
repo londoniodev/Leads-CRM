@@ -4,9 +4,11 @@ import * as React from 'react';
 import { Button } from '@/components/ui/button';
 import { ScraperDrawerShell } from './scraper-drawer-shell';
 import { ScraperDrawerForm } from './scraper-drawer-form';
+import { QuarantineList } from './quarantine-list';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { triggerGoogleMapsScraper, ScraperInputOptions } from '@/actions/scraper.actions';
 import { toast } from 'sonner';
-import { Bot, Sparkles } from 'lucide-react';
+import { Bot, Sparkles, AlertTriangle } from 'lucide-react';
 
 export function ScraperTrigger() {
   const [open, setOpen] = React.useState(false);
@@ -42,22 +44,39 @@ export function ScraperTrigger() {
       triggerButton={
         <Button className="bg-emerald-600 hover:bg-emerald-500 text-white font-medium gap-2 shadow-lg shadow-emerald-500/10 cursor-pointer font-sans">
           <Bot className="h-4 w-4" />
-          <span>Nueva Extracción</span>
+          <span>Panel de Extracción</span>
         </Button>
       }
       title={
         <>
           <Sparkles className="h-5 w-5 text-emerald-400 shrink-0" />
-          Extracción B2B de Prospectos
+          Centro de Prospectación & Cuarentena
         </>
       }
-      description="Configura los filtros de búsqueda y enriquecimiento para rascado en tiempo real."
+      description="Configura extracciones B2B o revisa perfiles sociales en bandeja de cuarentena."
     >
-      <ScraperDrawerForm
-        onSubmit={handleFormSubmit}
-        onCancel={() => setOpen(false)}
-        isPending={isPending}
-      />
+      <Tabs defaultValue="extraction" className="w-full">
+        <TabsList className="grid grid-cols-2 bg-zinc-950 border border-zinc-800 p-1 mb-4">
+          <TabsTrigger value="extraction" className="text-xs data-active:bg-zinc-800 data-active:text-emerald-400">
+            <Bot className="h-3.5 w-3.5 mr-1.5" /> Nueva Extracción
+          </TabsTrigger>
+          <TabsTrigger value="quarantine" className="text-xs data-active:bg-zinc-800 data-active:text-amber-400">
+            <AlertTriangle className="h-3.5 w-3.5 mr-1.5" /> Cuarentena
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="extraction">
+          <ScraperDrawerForm
+            onSubmit={handleFormSubmit}
+            onCancel={() => setOpen(false)}
+            isPending={isPending}
+          />
+        </TabsContent>
+
+        <TabsContent value="quarantine">
+          <QuarantineList />
+        </TabsContent>
+      </Tabs>
     </ScraperDrawerShell>
   );
 }

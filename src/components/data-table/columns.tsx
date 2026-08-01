@@ -160,6 +160,31 @@ export const columns: ColumnDef<LeadWithRelations>[] = [
     },
   },
   {
+    id: 'socialProfiles',
+    header: 'Redes Sociales',
+    cell: ({ row }) => {
+      const profiles = (row.original.socialProfiles || []).filter((p) => p.status === 'LINKED' || !p.status);
+      if (profiles.length === 0) return <span className="text-xs text-zinc-600">-</span>;
+
+      return (
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {profiles.map((profile) => (
+            <a
+              key={profile.id}
+              href={profile.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="h-7 w-7 rounded-lg bg-zinc-900 border border-zinc-800 hover:border-emerald-500/50 hover:bg-zinc-800 text-zinc-300 hover:text-emerald-400 flex items-center justify-center transition-colors"
+              title={`${profile.platform}: ${profile.username ? `@${profile.username}` : profile.url}`}
+            >
+              <Share2 className="h-3.5 w-3.5" />
+            </a>
+          ))}
+        </div>
+      );
+    },
+  },
+  {
     accessorKey: 'city',
     header: 'Ubicación',
     cell: ({ row }) => {

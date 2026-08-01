@@ -5,7 +5,7 @@ import { LeadStatus } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
 
 /**
- * Server Action para obtener los últimos 50 leads ordenados por fecha de creación descendente.
+ * Server Action para obtener los últimos 100 leads ordenados por fecha de creación descendente.
  */
 export async function getLeads() {
   try {
@@ -99,3 +99,31 @@ export async function getLeadById(id: string) {
   }
 }
 
+/**
+ * Server Action para obtener los perfiles sociales en estado de Cuarentena/Conflicto.
+ */
+export async function getConflictedSocialProfiles() {
+  try {
+    const profiles = await prisma.socialProfile.findMany({
+      where: {
+        status: 'CONFLICTED',
+      },
+      orderBy: {
+        updatedAt: 'desc',
+      },
+      take: 50,
+    });
+
+    return {
+      success: true,
+      data: profiles,
+    };
+  } catch (error: any) {
+    console.error('Error al consultar perfiles en conflicto:', error.message);
+    return {
+      success: false,
+      error: 'Error al consultar perfiles en cuarentena.',
+      data: [],
+    };
+  }
+}
