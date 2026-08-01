@@ -63,3 +63,39 @@ export async function updateLeadStatus(leadId: string, status: LeadStatus | stri
     };
   }
 }
+
+/**
+ * Server Action para obtener un lead específico por su ID con sus relaciones.
+ */
+export async function getLeadById(id: string) {
+  try {
+    const lead = await prisma.lead.findUnique({
+      where: { id },
+      include: {
+        socialProfiles: true,
+        contacts: true,
+      },
+    });
+
+    if (!lead) {
+      return {
+        success: false,
+        error: 'Lead no encontrado',
+        data: null,
+      };
+    }
+
+    return {
+      success: true,
+      data: lead,
+    };
+  } catch (error: any) {
+    console.error('Error al consultar lead por ID:', error.message);
+    return {
+      success: false,
+      error: 'Error al consultar la base de datos.',
+      data: null,
+    };
+  }
+}
+
