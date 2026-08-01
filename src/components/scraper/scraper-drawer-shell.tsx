@@ -20,8 +20,8 @@ export interface ScraperDrawerShellProps {
 }
 
 /**
- * Shell abstracto de Drawer lateral izquierdo (Principio de Abstracción y Responsabilidad Única - SRP).
- * Reutilizable para cualquier formulario o panel lateral en la posición izquierda.
+ * Shell abstracto de Drawer lateral derecho (Principio de Abstracción y Responsabilidad Única - SRP).
+ * Reutilizable para cualquier formulario o panel lateral en la posición derecha.
  */
 export function ScraperDrawerShell({
   open,
@@ -37,8 +37,8 @@ export function ScraperDrawerShell({
         {triggerButton}
       </SheetTrigger>
       <SheetContent
-        side="left"
-        className="w-full sm:max-w-md bg-zinc-900 border-r border-zinc-800 text-zinc-100 p-6 flex flex-col font-sans overflow-y-auto"
+        side="right"
+        className="w-full sm:max-w-md bg-zinc-900 border-l border-zinc-800 text-zinc-100 p-6 flex flex-col font-sans overflow-y-auto"
       >
         <SheetHeader className="text-left space-y-1.5 pb-4 border-b border-zinc-800/80">
           <SheetTitle className="text-xl font-bold flex items-center gap-2 text-white">
