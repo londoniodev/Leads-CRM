@@ -19,11 +19,26 @@ export async function triggerGoogleMapsScraper(query: string, limit: number = 50
       };
     }
 
-    // Invocar el actor verificado compass/crawler-google-places
-    const run = await apifyClient.actor('compass/crawler-google-places').call({
-      searchStringsArray: [query.trim()],
-      maxCrawledPlacesPerSearch: Math.max(1, limit),
-    });
+    const processorWebhookUrl = process.env.PROCESSOR_WEBHOOK_URL;
+    const webhooks = processorWebhookUrl
+      ? [
+          {
+            eventTypes: ['ACTOR.RUN.SUCCEEDED' as any],
+            requestUrl: processorWebhookUrl,
+          },
+        ]
+      : undefined;
+
+    // Iniciar ejecución asíncrona no bloqueante usando .start() con webhook ACTOR.RUN.SUCCEEDED
+    const run = await apifyClient.actor('compass/crawler-google-places').start(
+      {
+        searchStringsArray: [query.trim()],
+        maxCrawledPlacesPerSearch: Math.max(1, limit),
+      },
+      {
+        webhooks,
+      }
+    );
 
     return {
       success: true,
@@ -34,7 +49,7 @@ export async function triggerGoogleMapsScraper(query: string, limit: number = 50
       },
     };
   } catch (error: any) {
-    console.error('Error al invocar actor de Apify:', error?.message || error);
+    console.error('Error al iniciar el actor de Apify:', error?.message || error);
     return {
       success: false,
       error: error?.message || 'Error al iniciar la extracción en la nube de Apify.',
