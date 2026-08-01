@@ -3,6 +3,7 @@ import { columns } from '@/components/data-table/columns';
 import { DataTable } from '@/components/data-table/data-table';
 import { Badge } from '@/components/ui/badge';
 import { Sparkles, Database } from 'lucide-react';
+import { ScraperTrigger } from '@/components/scraper/scraper-trigger';
 
 export const revalidate = 0; // Lectura dinámica en tiempo real sin caché estática
 
@@ -32,6 +33,7 @@ export default async function HomePage() {
               <Database className="h-3.5 w-3.5 text-emerald-400" />
               Dokploy PostgreSQL: <span className="font-semibold text-emerald-400">{leads.length} Leads</span>
             </Badge>
+            <ScraperTrigger />
           </div>
         </div>
 
