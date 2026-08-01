@@ -16,6 +16,21 @@ export interface ScraperInputOptions {
 }
 
 /**
+ * Limpia y sanitiza strings de URL eliminando sintaxis de corchetes markdown [...](...) o comillas extra
+ */
+function cleanUrlString(rawUrl?: string): string | undefined {
+  if (!rawUrl || typeof rawUrl !== 'string') return undefined;
+
+  // Extraer la primera URL http(s) válida e ignorar corchetes markdown
+  const match = rawUrl.match(/https?:\/\/[^\s\]\)"']+/i);
+  if (match) {
+    return match[0].trim();
+  }
+
+  return rawUrl.trim();
+}
+
+/**
  * Server Action para lanzar la extracción B2B en la nube de Apify (compass/crawler-google-places).
  * Soporta invocación por string ("Restaurantes en Bogotá", 50) o por objeto rico ScraperInputOptions.
  */
@@ -56,17 +71,18 @@ export async function triggerGoogleMapsScraper(
       };
     }
 
-    const processorWebhookUrl = process.env.PROCESSOR_WEBHOOK_URL;
+    const rawWebhookUrl = process.env.PROCESSOR_WEBHOOK_URL;
+    const cleanedWebhookUrl = cleanUrlString(rawWebhookUrl);
     const secretToken = process.env.WEBHOOK_SECRET_TOKEN || 'xX6+0+EuTlUynI/USQli6I14OgrVg3dAqnrzTkuOV8w=';
 
     console.log(`[ApifyTrigger] Solicitud recibida: searchStrings=${JSON.stringify(searchStrings)}, location="${options.locationQuery || ''}"`);
 
-    if (!processorWebhookUrl) {
-      console.warn('⚠️ [ApifyTrigger] ALERTA CRÍTICA: PROCESSOR_WEBHOOK_URL no está configurada en las variables de entorno del CRM en Dokploy!');
+    if (!cleanedWebhookUrl) {
+      console.warn('⚠️ [ApifyTrigger] ALERTA CRÍTICA: PROCESSOR_WEBHOOK_URL no está configurada correctamente en Dokploy!');
     }
 
     // Formatear la URL del Webhook incluyendo la clave secreta por Query Parameter (?secret=...)
-    let formattedWebhookUrl = processorWebhookUrl;
+    let formattedWebhookUrl = cleanedWebhookUrl;
     if (formattedWebhookUrl && !formattedWebhookUrl.includes('secret=')) {
       const separator = formattedWebhookUrl.includes('?') ? '&' : '?';
       formattedWebhookUrl = `${formattedWebhookUrl}${separator}secret=${encodeURIComponent(secretToken)}`;
@@ -160,7 +176,8 @@ export async function ingestManualDataset(datasetId: string) {
       };
     }
 
-    const backendUrl = process.env.BACKEND_API_URL || process.env.PROCESSOR_WEBHOOK_URL?.replace(/\/webhooks\/apify\/leads.*$/, '') || 'http://72.62.161.199:3001';
+    const rawBackendUrl = process.env.BACKEND_API_URL || process.env.PROCESSOR_WEBHOOK_URL?.replace(/\/webhooks\/apify\/leads.*$/, '') || 'http://72.62.161.199:3001';
+    const backendUrl = cleanUrlString(rawBackendUrl) || 'http://72.62.161.199:3001';
 
     console.log(`[ManualIngest] Enviando petición a ${backendUrl}/api/datasets/process con datasetId="${datasetId.trim()}"`);
 
