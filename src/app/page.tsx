@@ -4,6 +4,7 @@ import { DataTable } from '@/components/data-table/data-table';
 import { Badge } from '@/components/ui/badge';
 import { Sparkles, Database } from 'lucide-react';
 import { ScraperTrigger } from '@/components/scraper/scraper-trigger';
+import { ScraperHub } from '@/components/scraper/scraper-hub';
 
 export const revalidate = 0; // Lectura dinámica en tiempo real sin caché estática
 
@@ -29,6 +30,7 @@ export default async function HomePage() {
           </div>
 
           <div className="flex items-center gap-3">
+            <ScraperHub />
             <Badge variant="outline" className="text-zinc-300 border-zinc-800 bg-zinc-900 px-3 py-1.5 flex items-center gap-2">
               <Database className="h-3.5 w-3.5 text-emerald-400" />
               Dokploy PostgreSQL: <span className="font-semibold text-emerald-400">{leads.length} Leads</span>

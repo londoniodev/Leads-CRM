@@ -32,8 +32,18 @@ export function ScraperTrigger() {
     startTransition(async () => {
       const res = await triggerGoogleMapsScraper(query, Number(limit));
 
-      if (res.success) {
-        toast.success(`Scraper iniciado con éxito en la nube de Apify (Run ID: ${res.data?.runId})`);
+      if (res.success && res.data?.runId) {
+        const newJob = {
+          runId: res.data.runId,
+          query: query.trim(),
+          limit: Number(limit),
+          status: res.data.status || 'RUNNING',
+          startedAt: Date.now(),
+        };
+
+        window.dispatchEvent(new CustomEvent('scraper-job-added', { detail: newJob }));
+
+        toast.success(`Scraper iniciado con éxito en la nube de Apify (Run ID: ${res.data.runId})`);
         setOpen(false);
         setQuery('');
       } else {

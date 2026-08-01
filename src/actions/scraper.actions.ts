@@ -62,3 +62,30 @@ export async function triggerGoogleMapsScraper(query: string, limit: number = 50
     };
   }
 }
+
+/**
+ * Server Action para consultar el estado actual de una ejecución en Apify por su runId.
+ */
+export async function getScraperRunStatus(runId: string) {
+  try {
+    if (!runId) {
+      return { success: false, status: 'UNKNOWN', error: 'Run ID requerido.' };
+    }
+
+    const run = await apifyClient.run(runId).get();
+
+    return {
+      success: true,
+      data: {
+        status: run?.status || 'UNKNOWN',
+        finishedAt: run?.finishedAt,
+      },
+    };
+  } catch (error: any) {
+    return {
+      success: false,
+      status: 'UNKNOWN',
+      error: error?.message || 'Error al consultar estado del run.',
+    };
+  }
+}
