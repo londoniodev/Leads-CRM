@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { updateLeadStatus } from '@/actions/lead.actions';
 import Link from 'next/link';
-import { MoreHorizontal, ExternalLink, Globe, Phone, Mail, CheckCircle2, Clock, XCircle, Sparkles, Eye, Share2 } from 'lucide-react';
+import { MoreHorizontal, ExternalLink, Globe, CheckCircle2, Clock, XCircle, Sparkles, Eye, Share2 } from 'lucide-react';
 import { useTransition } from 'react';
 
 // Extender el tipo de Lead para incluir relaciones opcionales
@@ -132,7 +132,7 @@ export const columns: ColumnDef<LeadWithRelations>[] = [
               href={website}
               target="_blank"
               rel="noopener noreferrer"
-              className={`text-xs flex items-center gap-1 mt-0.5 truncate max-w-[220px] hover:underline ${
+              className={`text-xs flex items-center gap-1 mt-0.5 truncate max-w-[240px] hover:underline ${
                 isSocialDomain ? 'text-purple-400' : 'text-blue-400'
               }`}
             >
@@ -160,31 +160,6 @@ export const columns: ColumnDef<LeadWithRelations>[] = [
     },
   },
   {
-    id: 'socialProfiles',
-    header: 'Redes Sociales',
-    cell: ({ row }) => {
-      const profiles = (row.original.socialProfiles || []).filter((p) => p.status === 'LINKED' || !p.status);
-      if (profiles.length === 0) return <span className="text-xs text-zinc-600">-</span>;
-
-      return (
-        <div className="flex items-center gap-1.5 flex-wrap">
-          {profiles.map((profile) => (
-            <a
-              key={profile.id}
-              href={profile.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="h-7 w-7 rounded-lg bg-zinc-900 border border-zinc-800 hover:border-emerald-500/50 hover:bg-zinc-800 text-zinc-300 hover:text-emerald-400 flex items-center justify-center transition-colors"
-              title={`${profile.platform}: ${profile.username ? `@${profile.username}` : profile.url}`}
-            >
-              <Share2 className="h-3.5 w-3.5" />
-            </a>
-          ))}
-        </div>
-      );
-    },
-  },
-  {
     accessorKey: 'city',
     header: 'Ubicación',
     cell: ({ row }) => {
@@ -192,34 +167,6 @@ export const columns: ColumnDef<LeadWithRelations>[] = [
       const country = row.original.country;
       const locationStr = [city, country].filter(Boolean).join(', ');
       return <span className="text-sm text-zinc-400">{locationStr || 'No especificada'}</span>;
-    },
-  },
-  {
-    accessorKey: 'phoneE164',
-    header: 'Teléfono E.164',
-    cell: ({ row }) => {
-      const phone = row.getValue('phoneE164') as string | null;
-      if (!phone) return <span className="text-xs text-zinc-600">-</span>;
-      return (
-        <a href={`tel:${phone}`} className="text-sm font-mono text-emerald-400/90 hover:underline flex items-center gap-1.5">
-          <Phone className="h-3 w-3" />
-          {phone}
-        </a>
-      );
-    },
-  },
-  {
-    accessorKey: 'primaryEmail',
-    header: 'Email Principal',
-    cell: ({ row }) => {
-      const email = row.getValue('primaryEmail') as string | null;
-      if (!email) return <span className="text-xs text-zinc-600">-</span>;
-      return (
-        <a href={`mailto:${email}`} className="text-sm text-zinc-300 hover:underline flex items-center gap-1.5">
-          <Mail className="h-3 w-3 text-zinc-400" />
-          {email}
-        </a>
-      );
     },
   },
   {
@@ -235,31 +182,6 @@ export const columns: ColumnDef<LeadWithRelations>[] = [
           <span className="text-xs text-zinc-500">/100</span>
         </div>
       );
-    },
-  },
-  {
-    accessorKey: 'status',
-    header: 'Estado',
-    cell: ({ row }) => {
-      const status = row.getValue('status') as LeadStatus;
-
-      const variantStyles: Record<LeadStatus, string> = {
-        ENRICHED: 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30',
-        QUALIFIED: 'bg-blue-500/20 text-blue-400 border border-blue-500/30',
-        ENRICHING: 'bg-amber-500/20 text-amber-400 border border-amber-500/30',
-        NEW: 'bg-zinc-800 text-zinc-300 border border-zinc-700',
-        REJECTED: 'bg-rose-500/20 text-rose-400 border border-rose-500/30',
-      };
-
-      return (
-        <Badge className={`px-2.5 py-0.5 font-medium text-xs ${variantStyles[status] || variantStyles.NEW}`}>
-          {status}
-        </Badge>
-      );
-    },
-    filterFn: (row, id, value: string[]) => {
-      if (!value || (Array.isArray(value) && value.length === 0)) return true;
-      return value.includes(row.getValue(id));
     },
   },
   {
