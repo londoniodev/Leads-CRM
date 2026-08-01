@@ -34,6 +34,21 @@ function cleanUrlString(rawUrl?: string): string | undefined {
 }
 
 /**
+ * Helper para construir webhook URL con token de autenticación
+ */
+function buildWebhookUrl(baseUrl?: string): string | undefined {
+  const cleaned = cleanUrlString(baseUrl);
+  if (!cleaned) return undefined;
+
+  const secretToken = process.env.WEBHOOK_SECRET_TOKEN || 'xX6+0+EuTlUynI/USQli6I14OgrVg3dAqnrzTkuOV8w=';
+  if (!cleaned.includes('secret=')) {
+    const separator = cleaned.includes('?') ? '&' : '?';
+    return `${cleaned}${separator}secret=${encodeURIComponent(secretToken)}`;
+  }
+  return cleaned;
+}
+
+/**
  * Server Action principal de enrutamiento de extracción B2B agnóstico a la fuente (Google Maps, Instagram, TikTok).
  */
 export async function triggerGoogleMapsScraper(
@@ -67,55 +82,92 @@ export async function triggerGoogleMapsScraper(
       };
     }
 
+    const token = process.env.APIFY_API_TOKEN;
+    if (!token) {
+      console.error('[ApifyTrigger] APIFY_API_TOKEN no configurado en variables de entorno.');
+      return {
+        success: false,
+        error: 'Falta configurar APIFY_API_TOKEN en las variables de entorno de Dokploy.',
+      };
+    }
+
+    const limitValue = Math.max(1, options.maxCrawledPlacesPerSearch || options.limit || 50);
+    const searchTermsString = searchStrings.join(', ');
+
+    // URL base de Webhooks
+    const rawSocialSeedWebhook = process.env.PROCESSOR_WEBHOOK_URL_SOCIAL_SEED || process.env.PROCESSOR_WEBHOOK_URL?.replace(/\/webhooks\/apify\/leads.*$/, '/webhooks/apify/social-seed') || 'http://72.62.161.199:3001/webhooks/apify/social-seed';
+    const formattedSocialSeedWebhookUrl = buildWebhookUrl(rawSocialSeedWebhook);
+    const socialSeedWebhooks = formattedSocialSeedWebhookUrl
+      ? [
+          {
+            eventTypes: ['ACTOR.RUN.SUCCEEDED' as any],
+            requestUrl: formattedSocialSeedWebhookUrl,
+          },
+        ]
+      : undefined;
+
     // Enrutador de fuentes
     switch (source) {
       case 'INSTAGRAM': {
-        console.log(`[ScraperRouter] 📸 Ruteando a actor de INSTAGRAM con términos=${JSON.stringify(searchStrings)}`);
+        console.log(`[ScraperRouter] 📸 Ejecutando apify/instagram-search-scraper para term="${searchTermsString}" (Limit: ${limitValue})`);
+        
+        const instagramInput = {
+          search: searchTermsString,
+          searchType: 'user',
+          resultsType: 'details',
+          resultsLimit: limitValue,
+        };
+
+        const run = await apifyClient.actor('apify/instagram-search-scraper').start(
+          instagramInput,
+          { webhooks: socialSeedWebhooks }
+        );
+
+        console.log(`[ScraperRouter] Actor Instagram iniciado con éxito. Run ID: ${run.id}, Status: ${run.status}`);
+
         return {
           success: true,
           data: {
-            runId: `ig_${Date.now()}`,
-            defaultDatasetId: `ds_ig_${Date.now()}`,
-            status: 'READY',
+            runId: run.id,
+            defaultDatasetId: run.defaultDatasetId,
+            status: run.status,
           },
         };
       }
 
       case 'TIKTOK': {
-        console.log(`[ScraperRouter] 🎵 Ruteando a actor de TIKTOK con términos=${JSON.stringify(searchStrings)}`);
+        console.log(`[ScraperRouter] 🎵 Ejecutando clockworks/tiktok-scraper para term="${searchTermsString}" (Limit: ${limitValue})`);
+
+        const tiktokInput = {
+          type: 'search',
+          keyword: searchTermsString,
+          searchType: 'user',
+          maxResults: limitValue,
+        };
+
+        const run = await apifyClient.actor('clockworks/tiktok-scraper').start(
+          tiktokInput,
+          { webhooks: socialSeedWebhooks }
+        );
+
+        console.log(`[ScraperRouter] Actor TikTok iniciado con éxito. Run ID: ${run.id}, Status: ${run.status}`);
+
         return {
           success: true,
           data: {
-            runId: `tt_${Date.now()}`,
-            defaultDatasetId: `ds_tt_${Date.now()}`,
-            status: 'READY',
+            runId: run.id,
+            defaultDatasetId: run.defaultDatasetId,
+            status: run.status,
           },
         };
       }
 
       case 'GOOGLE_MAPS':
       default: {
-        const token = process.env.APIFY_API_TOKEN;
-        if (!token) {
-          console.error('[ApifyTrigger] APIFY_API_TOKEN no configurado en variables de entorno.');
-          return {
-            success: false,
-            error: 'Falta configurar APIFY_API_TOKEN en las variables de entorno de Dokploy.',
-          };
-        }
-
         const rawWebhookUrl = process.env.PROCESSOR_WEBHOOK_URL;
-        const cleanedWebhookUrl = cleanUrlString(rawWebhookUrl);
-        const secretToken = process.env.WEBHOOK_SECRET_TOKEN || 'xX6+0+EuTlUynI/USQli6I14OgrVg3dAqnrzTkuOV8w=';
+        const formattedWebhookUrl = buildWebhookUrl(rawWebhookUrl);
 
         console.log(`[ApifyTrigger] Solicitud GOOGLE_MAPS recibida: searchStrings=${JSON.stringify(searchStrings)}, location="${options.locationQuery || ''}"`);
-
-        // Formatear la URL del Webhook incluyendo la clave secreta por Query Parameter (?secret=...)
-        let formattedWebhookUrl = cleanedWebhookUrl;
-        if (formattedWebhookUrl && !formattedWebhookUrl.includes('secret=')) {
-          const separator = formattedWebhookUrl.includes('?') ? '&' : '?';
-          formattedWebhookUrl = `${formattedWebhookUrl}${separator}secret=${encodeURIComponent(secretToken)}`;
-        }
 
         const webhooks = formattedWebhookUrl
           ? [
@@ -130,7 +182,7 @@ export async function triggerGoogleMapsScraper(
         const apifyInput = {
           searchStringsArray: searchStrings.length > 0 ? searchStrings : undefined,
           locationQuery: options.locationQuery || undefined,
-          maxCrawledPlacesPerSearch: Math.max(1, options.maxCrawledPlacesPerSearch || options.limit || 50),
+          maxCrawledPlacesPerSearch: limitValue,
           language: options.language || 'es',
           countryCode: options.countryCode ? options.countryCode.toLowerCase() : undefined,
           skipClosedPlaces: options.skipClosedPlaces ?? true,
@@ -177,16 +229,6 @@ export async function getScraperRunStatus(runId: string) {
   try {
     if (!runId) {
       return { success: false, status: 'UNKNOWN', error: 'Run ID requerido.' };
-    }
-
-    if (runId.startsWith('ig_') || runId.startsWith('tt_')) {
-      return {
-        success: true,
-        data: {
-          status: 'SUCCEEDED',
-          finishedAt: new Date().toISOString(),
-        },
-      };
     }
 
     const run = await apifyClient.run(runId).get();
