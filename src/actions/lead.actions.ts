@@ -1,6 +1,7 @@
 'use server';
 
 import prisma from '@/lib/prisma';
+import apifyClient from '@/lib/apify';
 import { LeadStatus } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
 
@@ -84,6 +85,72 @@ export async function deleteLead(leadId: string) {
     return {
       success: false,
       error: 'Error al eliminar el lead de la base de datos.',
+    };
+  }
+}
+
+/**
+ * Server Action para disparar el enriquecimiento manual de redes sociales via SERP-to-Social.
+ */
+export async function enrichLeadSocials(leadId: string) {
+  try {
+    const lead = await prisma.lead.findUnique({
+      where: { id: leadId },
+    });
+
+    if (!lead) {
+      return { success: false, error: 'Lead no encontrado.' };
+    }
+
+    const companyName = lead.companyName;
+    const location = lead.city || lead.country || '';
+
+    const dorks = [
+      location ? `site:instagram.com "${companyName}" "${location}"` : `site:instagram.com "${companyName}"`,
+      location ? `site:tiktok.com "${companyName}" "${location}"` : `site:tiktok.com "${companyName}"`,
+      location ? `site:facebook.com "${companyName}" "${location}"` : `site:facebook.com "${companyName}"`,
+    ].join('\n');
+
+    const rawSerpBridgeWebhook = process.env.PROCESSOR_WEBHOOK_URL_SERP_BRIDGE || process.env.PROCESSOR_WEBHOOK_URL?.replace(/\/webhooks\/apify\/leads.*$/, '/webhooks/apify/serp-bridge') || 'http://72.62.161.199:3001/webhooks/apify/serp-bridge';
+    const secretToken = process.env.WEBHOOK_SECRET_TOKEN || 'xX6+0+EuTlUynI/USQli6I14OgrVg3dAqnrzTkuOV8w=';
+    const formattedWebhookUrl = rawSerpBridgeWebhook.includes('secret=')
+      ? rawSerpBridgeWebhook
+      : `${rawSerpBridgeWebhook}${rawSerpBridgeWebhook.includes('?') ? '&' : '?'}secret=${encodeURIComponent(secretToken)}`;
+
+    const googleSearchInput = {
+      queries: dorks,
+      maxPagesPerQuery: 1,
+      resultsPerPage: 10,
+    };
+
+    await apifyClient.actor('apify/google-search-scraper').start(
+      googleSearchInput,
+      {
+        webhooks: [
+          {
+            eventTypes: ['ACTOR.RUN.SUCCEEDED' as any],
+            requestUrl: formattedWebhookUrl,
+          },
+        ],
+      }
+    );
+
+    await prisma.lead.update({
+      where: { id: leadId },
+      data: { status: 'ENRICHING' },
+    });
+
+    revalidatePath('/');
+
+    return {
+      success: true,
+      message: 'Enriquecimiento encolado...',
+    };
+  } catch (error: any) {
+    console.error('Error al enriquecer redes del lead:', error.message);
+    return {
+      success: false,
+      error: error?.message || 'Error al solicitar enriquecimiento en Apify.',
     };
   }
 }

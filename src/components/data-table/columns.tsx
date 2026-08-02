@@ -12,14 +12,15 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { updateLeadStatus, deleteLead } from '@/actions/lead.actions';
+import { updateLeadStatus, deleteLead, enrichLeadSocials } from '@/actions/lead.actions';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { MoreHorizontal, ExternalLink, Globe, CheckCircle2, Clock, XCircle, Sparkles, Eye, Share2, Trash2 } from 'lucide-react';
+import { MoreHorizontal, ExternalLink, Globe, CheckCircle2, Clock, XCircle, Sparkles, Eye, Share2, Trash2, Search } from 'lucide-react';
 import { useTransition } from 'react';
 
 // Extender el tipo de Lead para incluir relaciones opcionales
 export type LeadWithRelations = Lead & {
+  rawPhone?: string | null;
   socialProfiles?: SocialProfile[];
   contacts?: ContactPerson[];
 };
@@ -45,6 +46,18 @@ function ActionsCell({ lead }: { lead: LeadWithRelations }) {
     }
   };
 
+  const handleEnrichSocials = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    startTransition(async () => {
+      const res = await enrichLeadSocials(lead.id);
+      if (res.success) {
+        alert('Enriquecimiento encolado...');
+      } else {
+        alert(res.error || 'Error al encolar enriquecimiento.');
+      }
+    });
+  };
+
   const handleNavigateDetail = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (lead.id) {
@@ -62,13 +75,19 @@ function ActionsCell({ lead }: { lead: LeadWithRelations }) {
         <span className="sr-only">Abrir menú</span>
         <MoreHorizontal className="h-4 w-4" />
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="bg-zinc-900 border-zinc-800 text-zinc-200 w-48 font-sans" onClick={(e) => e.stopPropagation()}>
+      <DropdownMenuContent align="end" className="bg-zinc-900 border-zinc-800 text-zinc-200 w-52 font-sans" onClick={(e) => e.stopPropagation()}>
         <DropdownMenuLabel className="text-zinc-400 text-xs font-semibold">Navegación</DropdownMenuLabel>
         <DropdownMenuItem
           onClick={handleNavigateDetail}
           className="hover:bg-zinc-800 cursor-pointer flex items-center gap-2 text-zinc-200 text-xs"
         >
           <Eye className="h-3.5 w-3.5 text-emerald-400" /> Ver Detalle
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={handleEnrichSocials}
+          className="hover:bg-zinc-800 cursor-pointer flex items-center gap-2 text-purple-400 text-xs font-medium"
+        >
+          <Search className="h-3.5 w-3.5" /> Buscar Redes Sociales
         </DropdownMenuItem>
         <DropdownMenuSeparator className="bg-zinc-800" />
         <DropdownMenuLabel className="text-zinc-400 text-xs font-semibold">Cambiar Estado</DropdownMenuLabel>
