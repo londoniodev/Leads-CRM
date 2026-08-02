@@ -195,6 +195,11 @@ export const columns: ColumnDef<LeadWithRelations>[] = [
   {
     accessorKey: 'niche',
     header: 'Nicho',
+    filterFn: (row, columnId, filterValue) => {
+      if (!filterValue) return true;
+      const niche = (row.getValue(columnId) as string || '').toLowerCase();
+      return niche.includes(String(filterValue).toLowerCase());
+    },
     cell: ({ row }) => {
       const niche = row.getValue('niche') as string;
       return (
@@ -207,6 +212,13 @@ export const columns: ColumnDef<LeadWithRelations>[] = [
   {
     accessorKey: 'city',
     header: 'Ubicación',
+    filterFn: (row, columnId, filterValue) => {
+      if (!filterValue) return true;
+      const city = (row.original.city || '').toLowerCase();
+      const country = (row.original.country || '').toLowerCase();
+      const search = String(filterValue).toLowerCase();
+      return city.includes(search) || country.includes(search);
+    },
     cell: ({ row }) => {
       const city = row.original.city;
       const country = row.original.country;
@@ -217,6 +229,11 @@ export const columns: ColumnDef<LeadWithRelations>[] = [
   {
     accessorKey: 'score',
     header: 'Score',
+    filterFn: (row, columnId, filterValue) => {
+      if (filterValue === undefined || filterValue === null || filterValue === '') return true;
+      const minScore = Number(filterValue) || 0;
+      return (row.getValue(columnId) as number) >= minScore;
+    },
     cell: ({ row }) => {
       const score = row.getValue('score') as number;
       return (
