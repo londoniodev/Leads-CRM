@@ -35,6 +35,14 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
   Command,
   CommandEmpty,
   CommandGroup,
@@ -55,10 +63,13 @@ import {
   Sparkles,
   XCircle,
   RefreshCw,
-  Radio,
+  Trash2,
+  Layers,
+  ChevronDown,
 } from 'lucide-react';
 import { LeadStatus } from '@prisma/client';
 import { useAutoRefresh } from '@/hooks/use-auto-refresh';
+import { updateLeadsStatusBulk, deleteLeadsBulk } from '@/actions/lead.actions';
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
@@ -80,6 +91,7 @@ export function DataTable<TData, TValue>({
   const router = useRouter();
   const [isRefreshing, setIsRefreshing] = React.useState(false);
   const [isLiveAutoRefresh, setIsLiveAutoRefresh] = React.useState(true); // Verdadero por defecto
+  const [isPendingBulk, startBulkTransition] = React.useTransition();
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
   const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({});
@@ -117,9 +129,33 @@ export function DataTable<TData, TValue>({
     },
   });
 
+  const selectedRows = table.getFilteredSelectedRowModel().rows;
+  const selectedCount = selectedRows.length;
+  const selectedLeadIds = selectedRows.map((r) => (r.original as any).id).filter(Boolean);
+
+  // Acciones en Lote (Bulk Actions)
+  const handleBulkStatusChange = (newStatus: LeadStatus) => {
+    if (selectedLeadIds.length === 0) return;
+
+    startBulkTransition(async () => {
+      await updateLeadsStatusBulk(selectedLeadIds, newStatus);
+      table.resetRowSelection();
+    });
+  };
+
+  const handleBulkDelete = () => {
+    if (selectedLeadIds.length === 0) return;
+
+    if (confirm(`¿Estás seguro de eliminar ${selectedLeadIds.length} lead(s) seleccionados?`)) {
+      startBulkTransition(async () => {
+        await deleteLeadsBulk(selectedLeadIds);
+        table.resetRowSelection();
+      });
+    }
+  };
+
   // Exportar a CSV nativo usando Blob y URL.createObjectURL
   const handleExportCSV = () => {
-    const selectedRows = table.getFilteredSelectedRowModel().rows;
     // Si hay filas seleccionadas masivamente, exportar solo esas; si no, exportar todas las filtradas
     const targetRows = selectedRows.length > 0 ? selectedRows : table.getFilteredRowModel().rows;
 
@@ -176,11 +212,9 @@ export function DataTable<TData, TValue>({
     statusColumn?.setFilterValue(undefined);
   };
 
-  const selectedCount = table.getFilteredSelectedRowModel().rows.length;
-
   return (
     <div className="space-y-4 font-sans">
-      {/* Barra de Filtros, Auto-Refresh Toggle, Búsqueda y Exportación */}
+      {/* Barra de Filtros, Auto-Refresh Toggle, Búsqueda y Acciones en Lote */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-zinc-900/60 p-4 rounded-xl border border-zinc-800 backdrop-blur-sm">
         <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
           {/* Buscador de Empresa */}
@@ -294,8 +328,68 @@ export function DataTable<TData, TValue>({
           </Button>
         </div>
 
-        {/* Acciones de Lote y Exportar a CSV */}
-        <div className="flex items-center gap-3">
+        {/* Acciones de Lote (Bulk Actions) y Exportar a CSV */}
+        <div className="flex flex-wrap items-center gap-3">
+          {selectedCount > 0 && (
+            <div className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/30 px-3 py-1 rounded-lg text-xs animate-in fade-in slide-in-from-top-1 duration-200">
+              <Badge className="bg-emerald-500 text-white font-bold text-[11px] px-2 py-0">
+                {selectedCount} seleccionados
+              </Badge>
+
+              {/* Menú de Cambiar Estado en Lote */}
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  disabled={isPendingBulk}
+                  className="inline-flex items-center gap-1 bg-zinc-950 hover:bg-zinc-800 border border-zinc-800 text-zinc-200 text-xs font-medium px-2.5 py-1 rounded-md transition-colors cursor-pointer"
+                >
+                  <Layers className="h-3.5 w-3.5 text-blue-400" />
+                  <span>Estado Lote</span>
+                  <ChevronDown className="h-3 w-3 text-zinc-400" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="bg-zinc-900 border-zinc-800 text-zinc-200 w-44 font-sans text-xs">
+                  <DropdownMenuLabel className="text-zinc-400 text-[11px]">Aplicar Estado A {selectedCount} Leads</DropdownMenuLabel>
+                  <DropdownMenuSeparator className="bg-zinc-800" />
+                  <DropdownMenuItem
+                    onClick={() => handleBulkStatusChange(LeadStatus.ENRICHED)}
+                    className="hover:bg-zinc-800 cursor-pointer flex items-center gap-2 text-emerald-400"
+                  >
+                    <CheckCircle2 className="h-3.5 w-3.5" /> Marcar ENRICHED
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => handleBulkStatusChange(LeadStatus.QUALIFIED)}
+                    className="hover:bg-zinc-800 cursor-pointer flex items-center gap-2 text-blue-400"
+                  >
+                    <Sparkles className="h-3.5 w-3.5" /> Marcar QUALIFIED
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => handleBulkStatusChange(LeadStatus.NEW)}
+                    className="hover:bg-zinc-800 cursor-pointer flex items-center gap-2 text-zinc-300"
+                  >
+                    <Clock className="h-3.5 w-3.5 text-zinc-400" /> Marcar NEW
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => handleBulkStatusChange(LeadStatus.REJECTED)}
+                    className="hover:bg-zinc-800 cursor-pointer flex items-center gap-2 text-rose-400"
+                  >
+                    <XCircle className="h-3.5 w-3.5" /> Marcar REJECTED
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              {/* Botón de Eliminar en Lote */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleBulkDelete}
+                disabled={isPendingBulk}
+                className="h-7 bg-rose-950/40 hover:bg-rose-900/60 border-rose-800/80 text-rose-300 gap-1.5 text-xs px-2.5 cursor-pointer"
+              >
+                <Trash2 className="h-3.5 w-3.5 text-rose-400" />
+                <span>Eliminar Lote</span>
+              </Button>
+            </div>
+          )}
+
           <Button
             variant="outline"
             size="sm"
@@ -304,12 +398,8 @@ export function DataTable<TData, TValue>({
           >
             <Download className="h-3.5 w-3.5 text-emerald-400" />
             <span>Exportar CSV</span>
-            {selectedCount > 0 && (
-              <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 px-1.5 text-[10px]">
-                {selectedCount}
-              </Badge>
-            )}
           </Button>
+
           <div className="text-xs text-zinc-400">
             <span className="font-semibold text-zinc-200">{table.getRowModel().rows.length}</span> de{' '}
             <span className="font-semibold text-zinc-200">{data.length}</span>

@@ -12,9 +12,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { updateLeadStatus } from '@/actions/lead.actions';
+import { updateLeadStatus, deleteLead } from '@/actions/lead.actions';
 import Link from 'next/link';
-import { MoreHorizontal, ExternalLink, Globe, CheckCircle2, Clock, XCircle, Sparkles, Eye, Share2 } from 'lucide-react';
+import { MoreHorizontal, ExternalLink, Globe, CheckCircle2, Clock, XCircle, Sparkles, Eye, Share2, Trash2 } from 'lucide-react';
 import { useTransition } from 'react';
 
 // Extender el tipo de Lead para incluir relaciones opcionales
@@ -31,6 +31,14 @@ function ActionsCell({ lead }: { lead: LeadWithRelations }) {
     startTransition(async () => {
       await updateLeadStatus(lead.id, newStatus);
     });
+  };
+
+  const handleDelete = () => {
+    if (confirm(`¿Estás seguro de eliminar el lead "${lead.companyName}"?`)) {
+      startTransition(async () => {
+        await deleteLead(lead.id);
+      });
+    }
   };
 
   return (
@@ -72,6 +80,13 @@ function ActionsCell({ lead }: { lead: LeadWithRelations }) {
           className="hover:bg-zinc-800 cursor-pointer flex items-center gap-2 text-rose-400 text-xs"
         >
           <XCircle className="h-3.5 w-3.5" /> Marcar REJECTED
+        </DropdownMenuItem>
+        <DropdownMenuSeparator className="bg-zinc-800" />
+        <DropdownMenuItem
+          onClick={handleDelete}
+          className="hover:bg-rose-950/40 text-rose-400 cursor-pointer flex items-center gap-2 text-xs"
+        >
+          <Trash2 className="h-3.5 w-3.5" /> Eliminar Lead
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

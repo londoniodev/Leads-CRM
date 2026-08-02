@@ -65,6 +65,95 @@ export async function updateLeadStatus(leadId: string, status: LeadStatus | stri
 }
 
 /**
+ * Server Action para eliminar un lead por su ID.
+ */
+export async function deleteLead(leadId: string) {
+  try {
+    await prisma.lead.delete({
+      where: { id: leadId },
+    });
+
+    revalidatePath('/');
+
+    return {
+      success: true,
+      message: 'Lead eliminado con éxito.',
+    };
+  } catch (error: any) {
+    console.error('Error al eliminar lead:', error.message);
+    return {
+      success: false,
+      error: 'Error al eliminar el lead de la base de datos.',
+    };
+  }
+}
+
+/**
+ * Server Action para actualización masiva de estados (Bulk Action).
+ */
+export async function updateLeadsStatusBulk(leadIds: string[], status: LeadStatus) {
+  try {
+    if (!leadIds || leadIds.length === 0) {
+      return { success: false, error: 'No se enviaron IDs de leads.' };
+    }
+
+    const result = await prisma.lead.updateMany({
+      where: {
+        id: { in: leadIds },
+      },
+      data: {
+        status,
+      },
+    });
+
+    revalidatePath('/');
+
+    return {
+      success: true,
+      count: result.count,
+      message: `${result.count} lead(s) actualizados a ${status}.`,
+    };
+  } catch (error: any) {
+    console.error('Error en actualización masiva de leads:', error.message);
+    return {
+      success: false,
+      error: 'Error al actualizar leads en lote.',
+    };
+  }
+}
+
+/**
+ * Server Action para eliminación masiva de leads (Bulk Action).
+ */
+export async function deleteLeadsBulk(leadIds: string[]) {
+  try {
+    if (!leadIds || leadIds.length === 0) {
+      return { success: false, error: 'No se enviaron IDs de leads.' };
+    }
+
+    const result = await prisma.lead.deleteMany({
+      where: {
+        id: { in: leadIds },
+      },
+    });
+
+    revalidatePath('/');
+
+    return {
+      success: true,
+      count: result.count,
+      message: `${result.count} lead(s) eliminados correctamente.`,
+    };
+  } catch (error: any) {
+    console.error('Error en eliminación masiva de leads:', error.message);
+    return {
+      success: false,
+      error: 'Error al eliminar leads en lote.',
+    };
+  }
+}
+
+/**
  * Server Action para obtener un lead específico por su ID con sus relaciones.
  */
 export async function getLeadById(id: string) {
