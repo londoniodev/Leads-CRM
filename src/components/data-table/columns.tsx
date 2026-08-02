@@ -30,15 +30,13 @@ function ActionsCell({ lead }: { lead: LeadWithRelations }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
-  const handleStatusChange = (e: React.MouseEvent, newStatus: LeadStatus) => {
-    e.stopPropagation();
+  const handleStatusChange = (newStatus: LeadStatus) => {
     startTransition(async () => {
       await updateLeadStatus(lead.id, newStatus);
     });
   };
 
-  const handleDelete = (e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleDelete = () => {
     if (confirm(`¿Estás seguro de eliminar el lead "${lead.companyName}"?`)) {
       startTransition(async () => {
         await deleteLead(lead.id);
@@ -46,20 +44,18 @@ function ActionsCell({ lead }: { lead: LeadWithRelations }) {
     }
   };
 
-  const handleEnrichSocials = (e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleEnrichSocials = () => {
     startTransition(async () => {
       const res = await enrichLeadSocials(lead.id);
-      if (res.success) {
+      if (res?.success) {
         alert('Enriquecimiento encolado...');
       } else {
-        alert(res.error || 'Error al encolar enriquecimiento.');
+        alert(res?.error || 'Error al encolar enriquecimiento.');
       }
     });
   };
 
-  const handleNavigateDetail = (e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleNavigateDetail = () => {
     if (lead.id) {
       router.push(`/leads/${lead.id}`);
     }
@@ -68,14 +64,13 @@ function ActionsCell({ lead }: { lead: LeadWithRelations }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
-        onClick={(e) => e.stopPropagation()}
         className="h-8 w-8 p-0 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-md inline-flex items-center justify-center transition-colors cursor-pointer outline-none"
         disabled={isPending}
       >
         <span className="sr-only">Abrir menú</span>
         <MoreHorizontal className="h-4 w-4" />
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="bg-zinc-900 border-zinc-800 text-zinc-200 w-52 font-sans" onClick={(e) => e.stopPropagation()}>
+      <DropdownMenuContent align="end" className="bg-zinc-900 border-zinc-800 text-zinc-200 w-52 font-sans">
         <DropdownMenuLabel className="text-zinc-400 text-xs font-semibold">Navegación</DropdownMenuLabel>
         <DropdownMenuItem
           onClick={handleNavigateDetail}
@@ -93,25 +88,25 @@ function ActionsCell({ lead }: { lead: LeadWithRelations }) {
         <DropdownMenuLabel className="text-zinc-400 text-xs font-semibold">Cambiar Estado</DropdownMenuLabel>
         <DropdownMenuSeparator className="bg-zinc-800" />
         <DropdownMenuItem
-          onClick={(e) => handleStatusChange(e, LeadStatus.ENRICHED)}
+          onClick={() => handleStatusChange(LeadStatus.ENRICHED)}
           className="hover:bg-zinc-800 cursor-pointer flex items-center gap-2 text-emerald-400 text-xs"
         >
           <CheckCircle2 className="h-3.5 w-3.5" /> Marcar ENRICHED
         </DropdownMenuItem>
         <DropdownMenuItem
-          onClick={(e) => handleStatusChange(e, LeadStatus.QUALIFIED)}
+          onClick={() => handleStatusChange(LeadStatus.QUALIFIED)}
           className="hover:bg-zinc-800 cursor-pointer flex items-center gap-2 text-blue-400 text-xs"
         >
           <Sparkles className="h-3.5 w-3.5" /> Marcar QUALIFIED
         </DropdownMenuItem>
         <DropdownMenuItem
-          onClick={(e) => handleStatusChange(e, LeadStatus.NEW)}
+          onClick={() => handleStatusChange(LeadStatus.NEW)}
           className="hover:bg-zinc-800 cursor-pointer flex items-center gap-2 text-zinc-300 text-xs"
         >
           <Clock className="h-3.5 w-3.5 text-zinc-400" /> Marcar NEW
         </DropdownMenuItem>
         <DropdownMenuItem
-          onClick={(e) => handleStatusChange(e, LeadStatus.REJECTED)}
+          onClick={() => handleStatusChange(LeadStatus.REJECTED)}
           className="hover:bg-zinc-800 cursor-pointer flex items-center gap-2 text-rose-400 text-xs"
         >
           <XCircle className="h-3.5 w-3.5" /> Marcar REJECTED

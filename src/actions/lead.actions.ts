@@ -26,7 +26,7 @@ export async function getLeads() {
       data: leads,
     };
   } catch (error: any) {
-    console.error('Error al obtener leads desde PostgreSQL:', error.message);
+    console.error('Error al obtener leads desde PostgreSQL:', error?.message || error);
     return {
       success: false,
       error: 'Error al consultar los leads de la base de datos.',
@@ -49,7 +49,6 @@ export async function updateLeadStatus(leadId: string, status: LeadStatus | stri
       },
     });
 
-    // Forzar revalidación de la ruta para refrescar la tabla en tiempo real
     revalidatePath('/');
 
     return {
@@ -57,7 +56,7 @@ export async function updateLeadStatus(leadId: string, status: LeadStatus | stri
       data: updatedLead,
     };
   } catch (error: any) {
-    console.error('Error al actualizar estado del lead:', error.message);
+    console.error('Error al actualizar estado del lead:', error?.message || error);
     return {
       success: false,
       error: 'Error al actualizar el estado del lead en la base de datos.',
@@ -66,10 +65,12 @@ export async function updateLeadStatus(leadId: string, status: LeadStatus | stri
 }
 
 /**
- * Server Action para eliminar un lead por su ID.
+ * Server Action para eliminar un lead por su ID eliminando primero relaciones hijas.
  */
 export async function deleteLead(leadId: string) {
   try {
+    await prisma.contactPerson.deleteMany({ where: { leadId } });
+    await prisma.socialProfile.updateMany({ where: { leadId }, data: { leadId: null } });
     await prisma.lead.delete({
       where: { id: leadId },
     });
@@ -81,7 +82,7 @@ export async function deleteLead(leadId: string) {
       message: 'Lead eliminado con éxito.',
     };
   } catch (error: any) {
-    console.error('Error al eliminar lead:', error.message);
+    console.error('Error al eliminar lead:', error?.message || error);
     return {
       success: false,
       error: 'Error al eliminar el lead de la base de datos.',
@@ -147,7 +148,7 @@ export async function enrichLeadSocials(leadId: string) {
       message: 'Enriquecimiento encolado...',
     };
   } catch (error: any) {
-    console.error('Error al enriquecer redes del lead:', error.message);
+    console.error('Error al enriquecer redes del lead:', error?.message || error);
     return {
       success: false,
       error: error?.message || 'Error al solicitar enriquecimiento en Apify.',
@@ -181,7 +182,7 @@ export async function updateLeadsStatusBulk(leadIds: string[], status: LeadStatu
       message: `${result.count} lead(s) actualizados a ${status}.`,
     };
   } catch (error: any) {
-    console.error('Error en actualización masiva de leads:', error.message);
+    console.error('Error en actualización masiva de leads:', error?.message || error);
     return {
       success: false,
       error: 'Error al actualizar leads en lote.',
@@ -198,6 +199,9 @@ export async function deleteLeadsBulk(leadIds: string[]) {
       return { success: false, error: 'No se enviaron IDs de leads.' };
     }
 
+    await prisma.contactPerson.deleteMany({ where: { leadId: { in: leadIds } } });
+    await prisma.socialProfile.updateMany({ where: { leadId: { in: leadIds } }, data: { leadId: null } });
+
     const result = await prisma.lead.deleteMany({
       where: {
         id: { in: leadIds },
@@ -212,7 +216,7 @@ export async function deleteLeadsBulk(leadIds: string[]) {
       message: `${result.count} lead(s) eliminados correctamente.`,
     };
   } catch (error: any) {
-    console.error('Error en eliminación masiva de leads:', error.message);
+    console.error('Error en eliminación masiva de leads:', error?.message || error);
     return {
       success: false,
       error: 'Error al eliminar leads en lote.',
@@ -246,7 +250,7 @@ export async function getLeadById(id: string) {
       data: lead,
     };
   } catch (error: any) {
-    console.error('Error al consultar lead por ID:', error.message);
+    console.error('Error al consultar lead por ID:', error?.message || error);
     return {
       success: false,
       error: 'Error al consultar la base de datos.',
@@ -275,7 +279,7 @@ export async function getConflictedSocialProfiles() {
       data: profiles,
     };
   } catch (error: any) {
-    console.error('Error al consultar perfiles en conflicto:', error.message);
+    console.error('Error al consultar perfiles en conflicto:', error?.message || error);
     return {
       success: false,
       error: 'Error al consultar perfiles en cuarentena.',
