@@ -26,6 +26,8 @@ import {
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import {
   Popover,
@@ -48,14 +50,15 @@ import {
   Download,
   Filter,
   Check,
-  X,
   Clock,
   CheckCircle2,
   Sparkles,
   XCircle,
   RefreshCw,
+  Radio,
 } from 'lucide-react';
 import { LeadStatus } from '@prisma/client';
+import { useAutoRefresh } from '@/hooks/use-auto-refresh';
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
@@ -76,9 +79,13 @@ export function DataTable<TData, TValue>({
 }: DataTableProps<TData, TValue>) {
   const router = useRouter();
   const [isRefreshing, setIsRefreshing] = React.useState(false);
+  const [isLiveAutoRefresh, setIsLiveAutoRefresh] = React.useState(true); // Verdadero por defecto
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
   const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({});
+
+  // Hook de Polling Inteligente (Auto-Refresh cada 5 segundos)
+  useAutoRefresh(5000, isLiveAutoRefresh);
 
   // Función para refrescar manualmente los Server Components sin recargar la pestaña
   const handleManualRefresh = () => {
@@ -173,7 +180,7 @@ export function DataTable<TData, TValue>({
 
   return (
     <div className="space-y-4 font-sans">
-      {/* Barra de Filtros, Búsqueda y Exportación */}
+      {/* Barra de Filtros, Auto-Refresh Toggle, Búsqueda y Exportación */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-zinc-900/60 p-4 rounded-xl border border-zinc-800 backdrop-blur-sm">
         <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
           {/* Buscador de Empresa */}
@@ -255,7 +262,25 @@ export function DataTable<TData, TValue>({
             </PopoverContent>
           </Popover>
 
-          {/* Botón de Refrescar Datos */}
+          {/* Switch de Auto-Refresh (Actualización en Vivo) */}
+          <div className="flex items-center gap-2 bg-zinc-950 px-3 py-1.5 rounded-lg border border-zinc-800">
+            <Label htmlFor="live-refresh-toggle" className="text-xs text-zinc-300 cursor-pointer flex items-center gap-1.5">
+              <span className="relative flex h-2 w-2">
+                {isLiveAutoRefresh && (
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                )}
+                <span className={`relative inline-flex rounded-full h-2 w-2 ${isLiveAutoRefresh ? 'bg-emerald-500' : 'bg-zinc-600'}`}></span>
+              </span>
+              Actualización en Vivo
+            </Label>
+            <Switch
+              id="live-refresh-toggle"
+              checked={isLiveAutoRefresh}
+              onCheckedChange={setIsLiveAutoRefresh}
+            />
+          </div>
+
+          {/* Botón de Refrescar Datos Manual */}
           <Button
             variant="outline"
             size="sm"
