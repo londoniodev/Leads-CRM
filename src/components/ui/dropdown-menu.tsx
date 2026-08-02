@@ -1,11 +1,13 @@
 "use client"
 
 import * as React from "react"
+import { createPortal } from "react-dom"
 import { cn } from "@/lib/utils"
 
 interface DropdownContextType {
   open: boolean;
   setOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  triggerRef: React.RefObject<HTMLButtonElement | null>;
 }
 
 const DropdownContext = React.createContext<DropdownContextType | null>(null);
@@ -20,25 +22,11 @@ function useDropdown() {
 
 export function DropdownMenu({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = React.useState(false);
-  const containerRef = React.useRef<HTMLDivElement>(null);
-
-  React.useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        setOpen(false);
-      }
-    }
-    if (open) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [open]);
+  const triggerRef = React.useRef<HTMLButtonElement | null>(null);
 
   return (
-    <DropdownContext.Provider value={{ open, setOpen }}>
-      <div ref={containerRef} className="relative inline-block text-left">
+    <DropdownContext.Provider value={{ open, setOpen, triggerRef }}>
+      <div className="relative inline-block text-left">
         {children}
       </div>
     </DropdownContext.Provider>
@@ -52,10 +40,11 @@ export function DropdownMenuTrigger({
   onClick,
   ...props
 }: React.ButtonHTMLAttributes<HTMLButtonElement>) {
-  const { open, setOpen } = useDropdown();
+  const { open, setOpen, triggerRef } = useDropdown();
 
   return (
     <button
+      ref={triggerRef}
       type="button"
       disabled={disabled}
       onClick={(e) => {
@@ -81,24 +70,98 @@ export function DropdownMenuContent({
   className?: string;
   children?: React.ReactNode;
 }) {
-  const { open } = useDropdown();
+  const { open, setOpen, triggerRef } = useDropdown();
+  const [mounted, setMounted] = React.useState(false);
+  const [coords, setCoords] = React.useState<{ top: number; left: number }>({
+    top: 0,
+    left: 0,
+  });
+  const contentRef = React.useRef<HTMLDivElement | null>(null);
 
-  if (!open) return null;
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
 
-  const alignClasses =
-    align === "end" ? "right-0" : align === "center" ? "left-1/2 -translate-x-1/2" : "left-0";
+  const updateCoords = React.useCallback(() => {
+    if (!triggerRef.current) return;
+    const rect = triggerRef.current.getBoundingClientRect();
+    const menuHeight = contentRef.current ? contentRef.current.offsetHeight : 230;
+    const menuWidth = contentRef.current ? contentRef.current.offsetWidth : 208;
 
-  return (
+    // Check vertical space (if close to bottom, position above trigger)
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const positionAbove = spaceBelow < menuHeight + 12 && rect.top > menuHeight;
+
+    let top = positionAbove ? rect.top - menuHeight - 6 : rect.bottom + 6;
+    let left = rect.left;
+
+    if (align === "end") {
+      left = rect.right - menuWidth;
+    } else if (align === "center") {
+      left = rect.left + rect.width / 2 - menuWidth / 2;
+    }
+
+    // Keep horizontal alignment within screen boundary
+    left = Math.max(8, Math.min(left, window.innerWidth - menuWidth - 8));
+    top = Math.max(8, Math.min(top, window.innerHeight - menuHeight - 8));
+
+    setCoords({ top, left });
+  }, [triggerRef, align]);
+
+  React.useLayoutEffect(() => {
+    if (open) {
+      updateCoords();
+    }
+  }, [open, updateCoords]);
+
+  React.useEffect(() => {
+    if (!open) return;
+
+    function handleScrollOrResize() {
+      updateCoords();
+    }
+
+    function handleClickOutside(event: MouseEvent) {
+      const target = event.target as Node;
+      const isTrigger = triggerRef.current && triggerRef.current.contains(target);
+      const isContent = contentRef.current && contentRef.current.contains(target);
+
+      if (!isTrigger && !isContent) {
+        setOpen(false);
+      }
+    }
+
+    window.addEventListener("scroll", handleScrollOrResize, true);
+    window.addEventListener("resize", handleScrollOrResize);
+    document.addEventListener("mousedown", handleClickOutside);
+
+    return () => {
+      window.removeEventListener("scroll", handleScrollOrResize, true);
+      window.removeEventListener("resize", handleScrollOrResize);
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [open, setOpen, triggerRef, updateCoords]);
+
+  if (!open || !mounted) return null;
+
+  return createPortal(
     <div
+      ref={contentRef}
+      style={{
+        position: "fixed",
+        top: `${coords.top}px`,
+        left: `${coords.left}px`,
+        zIndex: 99999,
+      }}
       className={cn(
-        "absolute z-50 mt-1 min-w-[12rem] rounded-xl bg-zinc-900 p-1.5 text-zinc-200 shadow-2xl border border-zinc-800 animate-in fade-in zoom-in-95 duration-100",
-        alignClasses,
+        "min-w-[13rem] rounded-xl bg-zinc-900/95 p-1.5 text-zinc-200 shadow-2xl border border-zinc-700/80 backdrop-blur-md animate-in fade-in zoom-in-95 duration-100 font-sans text-xs",
         className
       )}
       {...props}
     >
       {children}
-    </div>
+    </div>,
+    document.body
   );
 }
 
