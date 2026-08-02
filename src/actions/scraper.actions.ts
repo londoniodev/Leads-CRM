@@ -92,63 +92,44 @@ export async function triggerGoogleMapsScraper(
     }
 
     const limitValue = Math.max(1, options.maxCrawledPlacesPerSearch || options.limit || 50);
-    const searchTermsString = searchStrings.join(', ');
 
-    // URL base de Webhooks
-    const rawSocialSeedWebhook = process.env.PROCESSOR_WEBHOOK_URL_SOCIAL_SEED || process.env.PROCESSOR_WEBHOOK_URL?.replace(/\/webhooks\/apify\/leads.*$/, '/webhooks/apify/social-seed') || 'http://72.62.161.199:3001/webhooks/apify/social-seed';
-    const formattedSocialSeedWebhookUrl = buildWebhookUrl(rawSocialSeedWebhook);
-    const socialSeedWebhooks = formattedSocialSeedWebhookUrl
+    // URL base de Webhook SERP Bridge
+    const rawSerpBridgeWebhook = process.env.PROCESSOR_WEBHOOK_URL_SERP_BRIDGE || process.env.PROCESSOR_WEBHOOK_URL?.replace(/\/webhooks\/apify\/leads.*$/, '/webhooks/apify/serp-bridge') || 'http://72.62.161.199:3001/webhooks/apify/serp-bridge';
+    const formattedSerpBridgeWebhookUrl = buildWebhookUrl(rawSerpBridgeWebhook);
+    const serpBridgeWebhooks = formattedSerpBridgeWebhookUrl
       ? [
           {
             eventTypes: ['ACTOR.RUN.SUCCEEDED' as any],
-            requestUrl: formattedSocialSeedWebhookUrl,
+            requestUrl: formattedSerpBridgeWebhookUrl,
           },
         ]
       : undefined;
 
     // Enrutador de fuentes
     switch (source) {
-      case 'INSTAGRAM': {
-        console.log(`[ScraperRouter] 📸 Ejecutando apify/instagram-search-scraper para term="${searchTermsString}" (Limit: ${limitValue})`);
-        
-        const instagramInput = {
-          search: searchTermsString,
-          searchType: 'user',
-          resultsType: 'details',
-          resultsLimit: limitValue,
-        };
-
-        const run = await apifyClient.actor('apify/instagram-search-scraper').start(
-          instagramInput,
-          { webhooks: socialSeedWebhooks }
-        );
-
-        console.log(`[ScraperRouter] Actor Instagram iniciado con éxito. Run ID: ${run.id}, Status: ${run.status}`);
-
-        return {
-          success: true,
-          data: {
-            runId: run.id,
-            defaultDatasetId: run.defaultDatasetId,
-            status: run.status,
-          },
-        };
-      }
-
+      case 'INSTAGRAM':
       case 'TIKTOK': {
-        console.log(`[ScraperRouter] 🎵 Ejecutando clockworks/tiktok-scraper para term="${searchTermsString}" (Limit: ${limitValue})`);
+        const platformDomain = source === 'INSTAGRAM' ? 'instagram.com' : 'tiktok.com';
+        const dorkQueries = searchStrings.map((term) =>
+          options.locationQuery
+            ? `site:${platformDomain} "${term}" "${options.locationQuery}"`
+            : `site:${platformDomain} "${term}"`
+        ).join('\n');
 
-        const tiktokInput = {
-          searchQueries: searchStrings,
+        console.log(`[ScraperRouter] 🔍 Ejecutando apify/google-search-scraper SERP-to-Social (${source}) con Dork queries:\n${dorkQueries}`);
+
+        const googleSearchInput = {
+          queries: dorkQueries,
+          maxPagesPerQuery: 1,
           resultsPerPage: limitValue,
         };
 
-        const run = await apifyClient.actor('clockworks/tiktok-scraper').start(
-          tiktokInput,
-          { webhooks: socialSeedWebhooks }
+        const run = await apifyClient.actor('apify/google-search-scraper').start(
+          googleSearchInput,
+          { webhooks: serpBridgeWebhooks }
         );
 
-        console.log(`[ScraperRouter] Actor TikTok iniciado con éxito. Run ID: ${run.id}, Status: ${run.status}`);
+        console.log(`[ScraperRouter] Actor SERP-to-Social (${source}) iniciado con éxito. Run ID: ${run.id}, Status: ${run.status}`);
 
         return {
           success: true,
