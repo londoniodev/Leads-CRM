@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { updateLeadStatus, deleteLead } from '@/actions/lead.actions';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { MoreHorizontal, ExternalLink, Globe, CheckCircle2, Clock, XCircle, Sparkles, Eye, Share2, Trash2 } from 'lucide-react';
 import { useTransition } from 'react';
 
@@ -25,15 +26,18 @@ export type LeadWithRelations = Lead & {
 
 // Componente helper para la celda de acciones interactiva
 function ActionsCell({ lead }: { lead: LeadWithRelations }) {
+  const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
-  const handleStatusChange = (newStatus: LeadStatus) => {
+  const handleStatusChange = (e: React.MouseEvent, newStatus: LeadStatus) => {
+    e.stopPropagation();
     startTransition(async () => {
       await updateLeadStatus(lead.id, newStatus);
     });
   };
 
-  const handleDelete = () => {
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
     if (confirm(`¿Estás seguro de eliminar el lead "${lead.companyName}"?`)) {
       startTransition(async () => {
         await deleteLead(lead.id);
@@ -41,42 +45,54 @@ function ActionsCell({ lead }: { lead: LeadWithRelations }) {
     }
   };
 
+  const handleNavigateDetail = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (lead.id) {
+      router.push(`/leads/${lead.id}`);
+    }
+  };
+
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger className="h-8 w-8 p-0 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-md inline-flex items-center justify-center transition-colors cursor-pointer outline-none" disabled={isPending}>
+      <DropdownMenuTrigger
+        onClick={(e) => e.stopPropagation()}
+        className="h-8 w-8 p-0 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-md inline-flex items-center justify-center transition-colors cursor-pointer outline-none"
+        disabled={isPending}
+      >
         <span className="sr-only">Abrir menú</span>
         <MoreHorizontal className="h-4 w-4" />
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="bg-zinc-900 border-zinc-800 text-zinc-200 w-48 font-sans">
+      <DropdownMenuContent align="end" className="bg-zinc-900 border-zinc-800 text-zinc-200 w-48 font-sans" onClick={(e) => e.stopPropagation()}>
         <DropdownMenuLabel className="text-zinc-400 text-xs font-semibold">Navegación</DropdownMenuLabel>
-        <DropdownMenuItem className="hover:bg-zinc-800 cursor-pointer text-zinc-200 p-0">
-          <Link href={`/leads/${lead.id}`} className="flex items-center gap-2 w-full px-1.5 py-1 text-xs font-medium">
-            <Eye className="h-3.5 w-3.5 text-emerald-400" /> Ver Detalle
-          </Link>
+        <DropdownMenuItem
+          onClick={handleNavigateDetail}
+          className="hover:bg-zinc-800 cursor-pointer flex items-center gap-2 text-zinc-200 text-xs"
+        >
+          <Eye className="h-3.5 w-3.5 text-emerald-400" /> Ver Detalle
         </DropdownMenuItem>
         <DropdownMenuSeparator className="bg-zinc-800" />
         <DropdownMenuLabel className="text-zinc-400 text-xs font-semibold">Cambiar Estado</DropdownMenuLabel>
         <DropdownMenuSeparator className="bg-zinc-800" />
         <DropdownMenuItem
-          onClick={() => handleStatusChange(LeadStatus.ENRICHED)}
+          onClick={(e) => handleStatusChange(e, LeadStatus.ENRICHED)}
           className="hover:bg-zinc-800 cursor-pointer flex items-center gap-2 text-emerald-400 text-xs"
         >
           <CheckCircle2 className="h-3.5 w-3.5" /> Marcar ENRICHED
         </DropdownMenuItem>
         <DropdownMenuItem
-          onClick={() => handleStatusChange(LeadStatus.QUALIFIED)}
+          onClick={(e) => handleStatusChange(e, LeadStatus.QUALIFIED)}
           className="hover:bg-zinc-800 cursor-pointer flex items-center gap-2 text-blue-400 text-xs"
         >
           <Sparkles className="h-3.5 w-3.5" /> Marcar QUALIFIED
         </DropdownMenuItem>
         <DropdownMenuItem
-          onClick={() => handleStatusChange(LeadStatus.NEW)}
+          onClick={(e) => handleStatusChange(e, LeadStatus.NEW)}
           className="hover:bg-zinc-800 cursor-pointer flex items-center gap-2 text-zinc-300 text-xs"
         >
           <Clock className="h-3.5 w-3.5 text-zinc-400" /> Marcar NEW
         </DropdownMenuItem>
         <DropdownMenuItem
-          onClick={() => handleStatusChange(LeadStatus.REJECTED)}
+          onClick={(e) => handleStatusChange(e, LeadStatus.REJECTED)}
           className="hover:bg-zinc-800 cursor-pointer flex items-center gap-2 text-rose-400 text-xs"
         >
           <XCircle className="h-3.5 w-3.5" /> Marcar REJECTED

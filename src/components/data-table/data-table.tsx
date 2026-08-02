@@ -156,7 +156,6 @@ export function DataTable<TData, TValue>({
 
   // Exportar a CSV nativo usando Blob y URL.createObjectURL
   const handleExportCSV = () => {
-    // Si hay filas seleccionadas masivamente, exportar solo esas; si no, exportar todas las filtradas
     const targetRows = selectedRows.length > 0 ? selectedRows : table.getFilteredRowModel().rows;
 
     if (targetRows.length === 0) return;
@@ -214,7 +213,7 @@ export function DataTable<TData, TValue>({
 
   return (
     <div className="space-y-4 font-sans">
-      {/* Barra de Filtros, Auto-Refresh Toggle, Búsqueda y Acciones en Lote */}
+      {/* Barra de Filtros, Auto-Refresh Toggle, Búsqueda y Acciones en Lote Simplificadas */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-zinc-900/60 p-4 rounded-xl border border-zinc-800 backdrop-blur-sm">
         <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
           {/* Buscador de Empresa */}
@@ -328,66 +327,53 @@ export function DataTable<TData, TValue>({
           </Button>
         </div>
 
-        {/* Acciones de Lote (Bulk Actions) y Exportar a CSV */}
+        {/* Acciones en Lote (Dropdown Único Simplificado) y Exportar a CSV */}
         <div className="flex flex-wrap items-center gap-3">
           {selectedCount > 0 && (
-            <div className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/30 px-3 py-1 rounded-lg text-xs animate-in fade-in slide-in-from-top-1 duration-200">
-              <Badge className="bg-emerald-500 text-white font-bold text-[11px] px-2 py-0">
-                {selectedCount} seleccionados
-              </Badge>
-
-              {/* Menú de Cambiar Estado en Lote */}
-              <DropdownMenu>
-                <DropdownMenuTrigger
-                  disabled={isPendingBulk}
-                  className="inline-flex items-center gap-1 bg-zinc-950 hover:bg-zinc-800 border border-zinc-800 text-zinc-200 text-xs font-medium px-2.5 py-1 rounded-md transition-colors cursor-pointer"
-                >
-                  <Layers className="h-3.5 w-3.5 text-blue-400" />
-                  <span>Estado Lote</span>
-                  <ChevronDown className="h-3 w-3 text-zinc-400" />
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="bg-zinc-900 border-zinc-800 text-zinc-200 w-44 font-sans text-xs">
-                  <DropdownMenuLabel className="text-zinc-400 text-[11px]">Aplicar Estado A {selectedCount} Leads</DropdownMenuLabel>
-                  <DropdownMenuSeparator className="bg-zinc-800" />
-                  <DropdownMenuItem
-                    onClick={() => handleBulkStatusChange(LeadStatus.ENRICHED)}
-                    className="hover:bg-zinc-800 cursor-pointer flex items-center gap-2 text-emerald-400"
-                  >
-                    <CheckCircle2 className="h-3.5 w-3.5" /> Marcar ENRICHED
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => handleBulkStatusChange(LeadStatus.QUALIFIED)}
-                    className="hover:bg-zinc-800 cursor-pointer flex items-center gap-2 text-blue-400"
-                  >
-                    <Sparkles className="h-3.5 w-3.5" /> Marcar QUALIFIED
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => handleBulkStatusChange(LeadStatus.NEW)}
-                    className="hover:bg-zinc-800 cursor-pointer flex items-center gap-2 text-zinc-300"
-                  >
-                    <Clock className="h-3.5 w-3.5 text-zinc-400" /> Marcar NEW
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => handleBulkStatusChange(LeadStatus.REJECTED)}
-                    className="hover:bg-zinc-800 cursor-pointer flex items-center gap-2 text-rose-400"
-                  >
-                    <XCircle className="h-3.5 w-3.5" /> Marcar REJECTED
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-
-              {/* Botón de Eliminar en Lote */}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleBulkDelete}
+            <DropdownMenu>
+              <DropdownMenuTrigger
                 disabled={isPendingBulk}
-                className="h-7 bg-rose-950/40 hover:bg-rose-900/60 border-rose-800/80 text-rose-300 gap-1.5 text-xs px-2.5 cursor-pointer"
+                className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs px-3 py-2 rounded-lg transition-colors cursor-pointer shadow-lg shadow-emerald-500/10 outline-none animate-in fade-in zoom-in-95 duration-150"
               >
-                <Trash2 className="h-3.5 w-3.5 text-rose-400" />
-                <span>Eliminar Lote</span>
-              </Button>
-            </div>
+                <Layers className="h-3.5 w-3.5" />
+                <span>Acciones en Lote ({selectedCount})</span>
+                <ChevronDown className="h-3.5 w-3.5 opacity-80" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="bg-zinc-900 border-zinc-800 text-zinc-200 w-52 font-sans text-xs">
+                <DropdownMenuLabel className="text-zinc-400 text-[11px] font-semibold">Cambiar Estado</DropdownMenuLabel>
+                <DropdownMenuItem
+                  onClick={() => handleBulkStatusChange(LeadStatus.ENRICHED)}
+                  className="hover:bg-zinc-800 cursor-pointer flex items-center gap-2 text-emerald-400"
+                >
+                  <CheckCircle2 className="h-3.5 w-3.5" /> Marcar ENRICHED
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => handleBulkStatusChange(LeadStatus.QUALIFIED)}
+                  className="hover:bg-zinc-800 cursor-pointer flex items-center gap-2 text-blue-400"
+                >
+                  <Sparkles className="h-3.5 w-3.5" /> Marcar QUALIFIED
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => handleBulkStatusChange(LeadStatus.NEW)}
+                  className="hover:bg-zinc-800 cursor-pointer flex items-center gap-2 text-zinc-300"
+                >
+                  <Clock className="h-3.5 w-3.5 text-zinc-400" /> Marcar NEW
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => handleBulkStatusChange(LeadStatus.REJECTED)}
+                  className="hover:bg-zinc-800 cursor-pointer flex items-center gap-2 text-rose-400"
+                >
+                  <XCircle className="h-3.5 w-3.5" /> Marcar REJECTED
+                </DropdownMenuItem>
+                <DropdownMenuSeparator className="bg-zinc-800" />
+                <DropdownMenuItem
+                  onClick={handleBulkDelete}
+                  className="hover:bg-rose-950/50 text-rose-400 cursor-pointer flex items-center gap-2 font-medium"
+                >
+                  <Trash2 className="h-3.5 w-3.5 text-rose-400" /> Eliminar seleccionados
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           )}
 
           <Button
