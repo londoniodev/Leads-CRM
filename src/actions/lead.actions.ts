@@ -143,6 +143,7 @@ export async function enrichLeadSocials(leadId: string) {
     });
 
     revalidatePath('/');
+    revalidatePath(`/leads/${leadId}`);
 
     return {
       success: true,

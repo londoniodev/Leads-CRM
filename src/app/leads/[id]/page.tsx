@@ -6,6 +6,7 @@ import { buttonVariants } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { LeadStatus } from '@prisma/client';
 import { LeadProposalEditor } from '@/components/proposals/lead-proposal-editor';
+import { LeadSocialSection } from '@/components/social/lead-social-section';
 import {
   ArrowLeft,
   Building2,
@@ -404,79 +405,13 @@ export default async function LeadDetailPage({ params }: PageProps) {
                 )}
               </div>
 
-              {/* Redes Sociales Integradas en Información General */}
-              <div className="pt-4 border-t border-zinc-800/80 space-y-3">
-                <div className="flex items-center justify-between">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-400 flex items-center gap-2">
-                    <Share2 className="h-4 w-4 text-purple-400" />
-                    Perfiles de Redes Sociales ({lead.socialProfiles.length})
-                  </h4>
-                </div>
-
-                {lead.socialProfiles.length === 0 ? (
-                  <div className="bg-zinc-950/40 border border-zinc-800/60 rounded-xl p-4 text-center">
-                    <p className="text-xs text-zinc-500">
-                      No se han vinculado perfiles sociales a este prospecto todavía.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {lead.socialProfiles.map((profile) => {
-                      const profileUrl = getSocialProfileUrl(profile);
-                      return (
-                        <a
-                          key={profile.id}
-                          href={profileUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="bg-zinc-950/70 border border-zinc-800/80 hover:border-purple-500/40 hover:bg-zinc-900/80 rounded-xl p-3.5 space-y-2.5 transition-all group block cursor-pointer"
-                        >
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <Share2 className="h-3.5 w-3.5 text-purple-400 group-hover:scale-110 transition-transform" />
-                              <span className="font-semibold text-xs text-zinc-100 capitalize">
-                                {profile.platform.toLowerCase().replace('_', ' ')}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                              {profile.verified && (
-                                <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30 text-[9px] px-1.5 py-0">
-                                  Verificado
-                                </Badge>
-                              )}
-                              <ExternalLink className="h-3 w-3 text-purple-400 opacity-60 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
-                            </div>
-                          </div>
-
-                          <div className="space-y-1">
-                            <p className="text-xs font-mono font-medium text-purple-300 group-hover:text-purple-200 truncate flex items-center gap-1">
-                              <AtSign className="h-3 w-3 shrink-0 opacity-70" />
-                              {profile.username ? profile.username.replace(/^@/, '') : profile.url.replace(/^https?:\/\/(www\.)?/, '')}
-                            </p>
-                            {profile.followers !== null && profile.followers !== undefined && (
-                              <p className="text-[11px] text-zinc-400">
-                                Seguidores: <strong className="text-zinc-200">{profile.followers.toLocaleString('es-ES')}</strong>
-                              </p>
-                            )}
-                          </div>
-
-                          {profile.bio && (
-                            <p className="text-[11px] text-zinc-400 line-clamp-2 italic bg-zinc-900/60 p-2 rounded border border-zinc-800/60">
-                              &ldquo;{profile.bio}&rdquo;
-                            </p>
-                          )}
-
-                          {profile.emailInBio && (
-                            <p className="text-[11px] text-emerald-400 font-mono truncate">
-                              Email Bio: {profile.emailInBio}
-                            </p>
-                          )}
-                        </a>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
+              {/* Presencia y Estadísticas de Redes Sociales */}
+              <LeadSocialSection
+                leadId={lead.id}
+                companyName={lead.companyName}
+                website={lead.website}
+                socialProfiles={lead.socialProfiles}
+              />
 
               {/* Hash y Trazabilidad */}
               <div className="pt-2 border-t border-zinc-800/60 flex flex-wrap items-center justify-between text-xs text-zinc-500 gap-2">
