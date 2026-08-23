@@ -70,6 +70,7 @@ export async function updateLeadStatus(leadId: string, status: LeadStatus | stri
 export async function deleteLead(leadId: string) {
   try {
     await prisma.contactPerson.deleteMany({ where: { leadId } });
+    await prisma.leadProposal.deleteMany({ where: { leadId } });
     await prisma.socialProfile.updateMany({ where: { leadId }, data: { leadId: null } });
     await prisma.lead.delete({
       where: { id: leadId },
@@ -200,6 +201,7 @@ export async function deleteLeadsBulk(leadIds: string[]) {
     }
 
     await prisma.contactPerson.deleteMany({ where: { leadId: { in: leadIds } } });
+    await prisma.leadProposal.deleteMany({ where: { leadId: { in: leadIds } } });
     await prisma.socialProfile.updateMany({ where: { leadId: { in: leadIds } }, data: { leadId: null } });
 
     const result = await prisma.lead.deleteMany({
@@ -234,6 +236,7 @@ export async function getLeadById(id: string) {
       include: {
         socialProfiles: true,
         contacts: true,
+        proposal: true,
       },
     });
 
