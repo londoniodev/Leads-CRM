@@ -1,4 +1,4 @@
-import prisma from '@/lib/prisma';
+import prisma, { ensureDatabaseSchema } from '@/lib/prisma';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
@@ -38,14 +38,31 @@ interface PageProps {
 export default async function LeadDetailPage({ params }: PageProps) {
   const { id } = await params;
 
-  const lead = await prisma.lead.findUnique({
-    where: { id },
-    include: {
-      socialProfiles: true,
-      contacts: true,
-      proposal: true,
-    },
-  });
+  let lead = null;
+  try {
+    lead = await prisma.lead.findUnique({
+      where: { id },
+      include: {
+        socialProfiles: true,
+        contacts: true,
+        proposal: true,
+      },
+    });
+  } catch (error: unknown) {
+    if (typeof error === 'object' && error !== null && 'code' in error && (error as { code: string }).code === 'P2021') {
+      await ensureDatabaseSchema();
+      lead = await prisma.lead.findUnique({
+        where: { id },
+        include: {
+          socialProfiles: true,
+          contacts: true,
+          proposal: true,
+        },
+      });
+    } else {
+      throw error;
+    }
+  }
 
   if (!lead) {
     notFound();
