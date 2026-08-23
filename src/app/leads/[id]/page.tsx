@@ -401,7 +401,7 @@ export default async function LeadDetailPage({ params }: PageProps) {
 
                   {profile.bio && (
                     <p className="text-xs text-zinc-400 line-clamp-2 italic bg-zinc-900/60 p-2 rounded border border-zinc-800/60">
-                      "{profile.bio}"
+                      &ldquo;{profile.bio}&rdquo;
                     </p>
                   )}
 

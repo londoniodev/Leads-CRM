@@ -37,7 +37,7 @@ export class GeminiAiClient implements IAiClient {
 
     try {
       return JSON.parse(responseText) as T;
-    } catch (parseError: any) {
+    } catch {
       // Si el texto incluye delimitadores markdown a pesar del mimeType
       const cleaned = responseText
         .replace(/```json\s*/gi, '')

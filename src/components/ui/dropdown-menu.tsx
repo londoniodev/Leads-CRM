@@ -40,7 +40,7 @@ export function DropdownMenuTrigger({
   onClick,
   ...props
 }: React.ButtonHTMLAttributes<HTMLButtonElement>) {
-  const { open, setOpen, triggerRef } = useDropdown();
+  const { setOpen, triggerRef } = useDropdown();
 
   return (
     <button
@@ -71,16 +71,16 @@ export function DropdownMenuContent({
   children?: React.ReactNode;
 }) {
   const { open, setOpen, triggerRef } = useDropdown();
-  const [mounted, setMounted] = React.useState(false);
+  const mounted = React.useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  );
   const [coords, setCoords] = React.useState<{ top: number; left: number }>({
     top: 0,
     left: 0,
   });
   const contentRef = React.useRef<HTMLDivElement | null>(null);
-
-  React.useEffect(() => {
-    setMounted(true);
-  }, []);
 
   const updateCoords = React.useCallback(() => {
     if (!triggerRef.current) return;

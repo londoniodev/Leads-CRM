@@ -203,7 +203,7 @@ export function LeadProposalEditor({ leadId, initialProposal }: LeadProposalEdit
               Aún no has generado una propuesta para este cliente
             </h3>
             <p className="text-xs text-zinc-400 leading-relaxed">
-              Haz clic en <strong>"Generar Propuesta con IA"</strong> para que el motor analice la presencia digital, nicho y datos del prospecto y elabore una estrategia personalizada 100% editable.
+              Haz clic en <strong>&quot;Generar Propuesta con IA&quot;</strong> para que el motor analice la presencia digital, nicho y datos del prospecto y elabore una estrategia personalizada 100% editable.
             </p>
           </div>
           <Button
@@ -497,7 +497,7 @@ export function LeadProposalEditor({ leadId, initialProposal }: LeadProposalEdit
             </div>
             {isDirty && (
               <span className="text-amber-400 font-medium">
-                Recuerda presionar "Guardar Cambios" para persistir en la base de datos.
+                Recuerda presionar &quot;Guardar Cambios&quot; para persistir en la base de datos.
               </span>
             )}
           </div>

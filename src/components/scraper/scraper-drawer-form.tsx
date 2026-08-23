@@ -33,14 +33,14 @@ export function ScraperDrawerForm({
   const [searchTerms, setSearchTerms] = React.useState('');
   const [locationQuery, setLocationQuery] = React.useState('');
   const [countryCode, setCountryCode] = React.useState('CO');
-  const [language, setLanguage] = React.useState('es');
+  const language = 'es';
   const [limit, setLimit] = React.useState(50);
   const [minRating, setMinRating] = React.useState('0');
   
   const [skipClosedPlaces, setSkipClosedPlaces] = React.useState(true);
-  const [scrapeWebsite, setScrapeWebsite] = React.useState(true);
+  const scrapeWebsite = true;
   const [onlyWithWebsite, setOnlyWithWebsite] = React.useState(false);
-  const [scrapeEmailsAndSocialMedia, setScrapeEmailsAndSocialMedia] = React.useState(true);
+  const scrapeEmailsAndSocialMedia = true;
   const [enrichSocial, setEnrichSocial] = React.useState(true);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -80,7 +80,7 @@ export function ScraperDrawerForm({
           <Layers className="h-3.5 w-3.5 text-emerald-400" />
           Fuente de Extracción
         </Label>
-        <Select value={source} onValueChange={(val) => { if (val) setSource(val as any); }} disabled={isPending}>
+        <Select value={source} onValueChange={(val) => { if (val) setSource(val as 'GOOGLE_MAPS' | 'INSTAGRAM' | 'TIKTOK'); }} disabled={isPending}>
           <SelectTrigger className="bg-zinc-950 border-zinc-800 text-zinc-100 font-medium">
             <SelectValue placeholder="Seleccionar fuente" />
           </SelectTrigger>

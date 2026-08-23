@@ -25,20 +25,18 @@ const STORAGE_KEY = 'leads_crm_active_scraper_jobs';
 
 export function ScraperHub() {
   const router = useRouter();
-  const [jobs, setJobs] = React.useState<ActiveScraperJob[]>([]);
-  const [open, setOpen] = React.useState(false);
-
-  // Cargar trabajos iniciales desde localStorage
-  React.useEffect(() => {
+  const [jobs, setJobs] = React.useState<ActiveScraperJob[]>(() => {
     try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        setJobs(JSON.parse(saved));
+      if (typeof window !== 'undefined') {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) return JSON.parse(saved);
       }
-    } catch (e) {
-      console.error('Error al cargar trabajos de extracción:', e);
+    } catch {
+      // ignore
     }
-  }, []);
+    return [];
+  });
+  const [open, setOpen] = React.useState(false);
 
   // Guardar cambios en localStorage
   const updateJobs = React.useCallback((newJobs: ActiveScraperJob[]) => {
@@ -59,7 +57,7 @@ export function ScraperHub() {
           const updated = [customEvent.detail, ...prev.filter((j) => j.runId !== customEvent.detail.runId)];
           try {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-          } catch (e) {}
+          } catch {}
           return updated;
         });
       }
@@ -102,7 +100,7 @@ export function ScraperHub() {
                     const filtered = current.filter((j) => j.runId !== job.runId);
                     try {
                       localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
-                    } catch (e) {}
+                    } catch {}
                     return filtered;
                   });
                   router.refresh();

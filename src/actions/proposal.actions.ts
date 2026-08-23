@@ -19,11 +19,12 @@ export async function generateLeadProposalAction(leadId: string) {
       success: true,
       data: proposal,
     };
-  } catch (error: any) {
-    console.error('Error al generar la propuesta con IA:', error?.message || error);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Ocurrió un error inesperado al procesar la propuesta con IA.';
+    console.error('Error al generar la propuesta con IA:', message);
     return {
       success: false,
-      error: error?.message || 'Ocurrió un error inesperado al procesar la propuesta con IA.',
+      error: message,
     };
   }
 }
@@ -43,11 +44,12 @@ export async function saveLeadProposalAction(leadId: string, updates: UpdateProp
       success: true,
       data: updated,
     };
-  } catch (error: any) {
-    console.error('Error al guardar la propuesta personalizada:', error?.message || error);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Error al guardar los cambios en la base de datos.';
+    console.error('Error al guardar la propuesta personalizada:', message);
     return {
       success: false,
-      error: error?.message || 'Error al guardar los cambios en la base de datos.',
+      error: message,
     };
   }
 }
@@ -65,11 +67,12 @@ export async function getLeadProposalAction(leadId: string) {
       success: true,
       data: proposal,
     };
-  } catch (error: any) {
-    console.error('Error al consultar la propuesta del lead:', error?.message || error);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Error al obtener la propuesta.';
+    console.error('Error al consultar la propuesta del lead:', message);
     return {
       success: false,
-      error: error?.message || 'Error al obtener la propuesta.',
+      error: message,
       data: null,
     };
   }

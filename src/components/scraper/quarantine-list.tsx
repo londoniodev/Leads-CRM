@@ -24,18 +24,29 @@ export function QuarantineList() {
   const [selectedLeads, setSelectedLeads] = React.useState<Record<string, string>>({});
   const [pendingProfiles, setPendingProfiles] = React.useState<Record<string, boolean>>({});
 
-  const fetchProfiles = React.useCallback(async () => {
+  const fetchProfiles = async () => {
     setLoading(true);
     const res = await getConflictedProfilesWithCandidates();
     if (res.success && res.data) {
       setProfiles(res.data);
     }
     setLoading(false);
-  }, []);
+  };
 
   React.useEffect(() => {
-    fetchProfiles();
-  }, [fetchProfiles]);
+    let isMounted = true;
+    getConflictedProfilesWithCandidates().then((res) => {
+      if (isMounted && res.success && res.data) {
+        setProfiles(res.data);
+      }
+      if (isMounted) {
+        setLoading(false);
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const handleResolve = async (profileId: string) => {
     const selectedLeadId = selectedLeads[profileId];
