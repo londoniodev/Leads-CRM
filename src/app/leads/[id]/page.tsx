@@ -25,6 +25,7 @@ import {
   Hash,
   ChevronDown,
   AtSign,
+  MessageCircle,
 } from 'lucide-react';
 
 export const revalidate = 0;
@@ -89,6 +90,53 @@ export default async function LeadDetailPage({ params }: PageProps) {
 
   const locationStr = [lead.address, lead.city, lead.country].filter(Boolean).join(', ');
 
+  const rawPhone = lead.phoneE164 || lead.rawPhone;
+  const cleanPhoneDigits = rawPhone ? rawPhone.replace(/\D/g, '') : null;
+  const whatsappUrl = cleanPhoneDigits ? `https://wa.me/${cleanPhoneDigits}` : null;
+
+  const websiteUrl = lead.website
+    ? lead.website.startsWith('http://') || lead.website.startsWith('https://')
+      ? lead.website
+      : `https://${lead.website}`
+    : null;
+
+  const googleMapsProfileUrl = (() => {
+    const profile = lead.socialProfiles?.find((p) => p.platform === 'GOOGLE_MAPS')?.url;
+    if (profile) return profile;
+    if (lead.placeId) return `https://www.google.com/maps/place/?q=place_id:${lead.placeId}`;
+    const q = [lead.companyName, lead.address, lead.city, lead.country].filter(Boolean).join(' ');
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
+  })();
+
+  const googleMapsLocationUrl = (() => {
+    if (lead.placeId && locationStr) {
+      return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(locationStr)}&query_place_id=${lead.placeId}`;
+    }
+    if (locationStr) {
+      return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(locationStr)}`;
+    }
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(lead.companyName)}`;
+  })();
+
+  const getSocialProfileUrl = (profile: { platform: string; username?: string | null; url: string }) => {
+    if (profile.username) {
+      const cleanUsername = profile.username.replace(/^@/, '');
+      switch (profile.platform) {
+        case 'TIKTOK':
+          return `https://tiktok.com/@${cleanUsername}`;
+        case 'INSTAGRAM':
+          return `https://instagram.com/${cleanUsername}`;
+        case 'FACEBOOK':
+          return `https://facebook.com/${cleanUsername}`;
+        case 'LINKEDIN':
+          return profile.url || `https://linkedin.com/company/${cleanUsername}`;
+        default:
+          return profile.url;
+      }
+    }
+    return profile.url;
+  };
+
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-100 p-4 sm:p-6 md:p-10 font-sans">
       <div className="max-w-6xl mx-auto space-y-6">
@@ -145,13 +193,16 @@ export default async function LeadDetailPage({ params }: PageProps) {
 
             {/* Acciones Rápidas (CTA Buttons) */}
             <div className="flex flex-wrap items-center gap-2">
-              {lead.phoneE164 && (
+              {whatsappUrl && (
                 <a
-                  href={`tel:${lead.phoneE164}`}
-                  className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-lg px-4 py-2.5 shadow-lg shadow-emerald-500/10 transition-colors"
+                  href={whatsappUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-lg px-4 py-2.5 shadow-lg shadow-emerald-500/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
                 >
-                  <Phone className="h-3.5 w-3.5" />
-                  Llamar ({lead.phoneE164})
+                  <MessageCircle className="h-3.5 w-3.5" />
+                  Escribir al WhatsApp ({lead.phoneE164 || lead.rawPhone})
+                  <ExternalLink className="h-3 w-3 opacity-70" />
                 </a>
               )}
 
@@ -165,9 +216,9 @@ export default async function LeadDetailPage({ params }: PageProps) {
                 </a>
               )}
 
-              {lead.website && (
+              {websiteUrl && (
                 <a
-                  href={lead.website}
+                  href={websiteUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className={`inline-flex items-center gap-2 text-xs font-medium border rounded-lg px-4 py-2.5 transition-colors ${
@@ -197,73 +248,232 @@ export default async function LeadDetailPage({ params }: PageProps) {
                 </h3>
               </div>
 
+              {/* Grid de Recuadros Interactivos */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="bg-zinc-950/60 p-4 rounded-xl border border-zinc-800/80 space-y-1">
-                  <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider flex items-center gap-1.5">
-                    <Phone className="h-3.5 w-3.5 text-emerald-400" /> Teléfono E.164
-                  </span>
-                  {lead.phoneE164 ? (
-                    <a href={`tel:${lead.phoneE164}`} className="text-sm font-mono font-medium text-emerald-400 hover:underline block pt-1">
-                      {lead.phoneE164}
-                    </a>
-                  ) : (
-                    <p className="text-xs text-zinc-500 pt-1">No disponible</p>
-                  )}
-                </div>
-
-                <div className="bg-zinc-950/60 p-4 rounded-xl border border-zinc-800/80 space-y-1">
-                  <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider flex items-center gap-1.5">
-                    <Mail className="h-3.5 w-3.5 text-blue-400" /> Email Principal
-                  </span>
-                  {lead.primaryEmail ? (
-                    <a href={`mailto:${lead.primaryEmail}`} className="text-sm font-medium text-zinc-200 hover:underline block pt-1 truncate">
-                      {lead.primaryEmail}
-                    </a>
-                  ) : (
-                    <p className="text-xs text-zinc-500 pt-1">No disponible</p>
-                  )}
-                </div>
-
-                <div className="bg-zinc-950/60 p-4 rounded-xl border border-zinc-800/80 space-y-1">
-                  <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider flex items-center gap-1.5">
-                    <Globe className="h-3.5 w-3.5 text-indigo-400" /> Sitio Web Oficial
-                  </span>
-                  {lead.website && !isSocialWebsite ? (
-                    <a href={lead.website} target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-blue-400 hover:underline flex items-center gap-1 pt-1 truncate">
-                      {lead.website.replace(/^https?:\/\//, '')}
-                      <ExternalLink className="h-3 w-3 shrink-0" />
-                    </a>
-                  ) : (
-                    <p className="text-xs text-zinc-500 pt-1">{isSocialWebsite ? 'Solo red social detectada' : 'Sin sitio web'}</p>
-                  )}
-                </div>
-
-                <div className="bg-zinc-950/60 p-4 rounded-xl border border-zinc-800/80 space-y-1">
-                  <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider flex items-center gap-1.5">
-                    <MapPin className="h-3.5 w-3.5 text-rose-400" /> Ubicación
-                  </span>
-                  <p className="text-sm text-zinc-300 pt-1 truncate">
-                    {locationStr || 'No especificada'}
-                  </p>
-                </div>
-
-                {lead.rating !== null && lead.rating !== undefined && (
-                  <div className="bg-zinc-950/60 p-4 rounded-xl border border-zinc-800/80 space-y-1">
-                    <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider flex items-center gap-1.5">
-                      <Sparkles className="h-3.5 w-3.5 text-amber-400" /> Rating Google Maps
-                    </span>
-                    <p className="text-sm text-zinc-200 pt-1 font-semibold">
-                      ⭐ {lead.rating.toFixed(1)} {lead.reviewsCount !== null && lead.reviewsCount !== undefined && <span className="text-zinc-400 font-normal">({lead.reviewsCount.toLocaleString('es-ES')} reseñas)</span>}
+                {/* 1. Teléfono / WhatsApp */}
+                {whatsappUrl ? (
+                  <a
+                    href={whatsappUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="bg-zinc-950/60 p-4 rounded-xl border border-zinc-800/80 hover:border-emerald-500/40 hover:bg-zinc-900/80 transition-all cursor-pointer group space-y-1 block"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider flex items-center gap-1.5">
+                        <MessageCircle className="h-3.5 w-3.5 text-emerald-400" /> Teléfono / WhatsApp
+                      </span>
+                      <ExternalLink className="h-3 w-3 text-emerald-500/60 opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
+                    </div>
+                    <p className="text-sm font-mono font-medium text-emerald-400 group-hover:underline pt-1">
+                      {lead.phoneE164 || lead.rawPhone}
                     </p>
+                    <span className="text-[10px] text-zinc-500 group-hover:text-emerald-400/80 block transition-colors">
+                      Abrir chat de WhatsApp &rarr;
+                    </span>
+                  </a>
+                ) : (
+                  <div className="bg-zinc-950/60 p-4 rounded-xl border border-zinc-800/80 space-y-1 opacity-70">
+                    <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider flex items-center gap-1.5">
+                      <Phone className="h-3.5 w-3.5 text-zinc-500" /> Teléfono E.164
+                    </span>
+                    <p className="text-xs text-zinc-500 pt-1">No disponible</p>
                   </div>
                 )}
 
-                {lead.googleCategory && (
-                  <div className="bg-zinc-950/60 p-4 rounded-xl border border-zinc-800/80 space-y-1">
-                    <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider flex items-center gap-1.5">
-                      <Layers className="h-3.5 w-3.5 text-cyan-400" /> Categoría Google
+                {/* 2. Email Principal */}
+                {lead.primaryEmail ? (
+                  <a
+                    href={`mailto:${lead.primaryEmail}`}
+                    className="bg-zinc-950/60 p-4 rounded-xl border border-zinc-800/80 hover:border-blue-500/40 hover:bg-zinc-900/80 transition-all cursor-pointer group space-y-1 block"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider flex items-center gap-1.5">
+                        <Mail className="h-3.5 w-3.5 text-blue-400" /> Email Principal
+                      </span>
+                      <ExternalLink className="h-3 w-3 text-blue-500/60 opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
+                    </div>
+                    <p className="text-sm font-medium text-zinc-200 group-hover:underline pt-1 truncate">
+                      {lead.primaryEmail}
+                    </p>
+                    <span className="text-[10px] text-zinc-500 group-hover:text-blue-400/80 block transition-colors">
+                      Redactar correo &rarr;
                     </span>
-                    <p className="text-sm text-zinc-300 pt-1">{lead.googleCategory}</p>
+                  </a>
+                ) : (
+                  <div className="bg-zinc-950/60 p-4 rounded-xl border border-zinc-800/80 space-y-1 opacity-70">
+                    <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider flex items-center gap-1.5">
+                      <Mail className="h-3.5 w-3.5 text-zinc-500" /> Email Principal
+                    </span>
+                    <p className="text-xs text-zinc-500 pt-1">No disponible</p>
+                  </div>
+                )}
+
+                {/* 3. Sitio Web Oficial */}
+                {websiteUrl ? (
+                  <a
+                    href={websiteUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="bg-zinc-950/60 p-4 rounded-xl border border-zinc-800/80 hover:border-indigo-500/40 hover:bg-zinc-900/80 transition-all cursor-pointer group space-y-1 block"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider flex items-center gap-1.5">
+                        <Globe className="h-3.5 w-3.5 text-indigo-400" /> Sitio Web Oficial
+                      </span>
+                      <ExternalLink className="h-3 w-3 text-indigo-500/60 opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
+                    </div>
+                    <p className="text-sm font-medium text-blue-400 group-hover:underline pt-1 truncate">
+                      {lead.website!.replace(/^https?:\/\//, '')}
+                    </p>
+                    <span className="text-[10px] text-zinc-500 group-hover:text-indigo-400/80 block transition-colors">
+                      Visitar página web &rarr;
+                    </span>
+                  </a>
+                ) : (
+                  <div className="bg-zinc-950/60 p-4 rounded-xl border border-zinc-800/80 space-y-1 opacity-70">
+                    <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider flex items-center gap-1.5">
+                      <Globe className="h-3.5 w-3.5 text-zinc-500" /> Sitio Web Oficial
+                    </span>
+                    <p className="text-xs text-zinc-500 pt-1">{isSocialWebsite ? 'Solo red social detectada' : 'Sin sitio web'}</p>
+                  </div>
+                )}
+
+                {/* 4. Ubicación */}
+                <a
+                  href={googleMapsLocationUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bg-zinc-950/60 p-4 rounded-xl border border-zinc-800/80 hover:border-rose-500/40 hover:bg-zinc-900/80 transition-all cursor-pointer group space-y-1 block"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider flex items-center gap-1.5">
+                      <MapPin className="h-3.5 w-3.5 text-rose-400" /> Ubicación
+                    </span>
+                    <ExternalLink className="h-3 w-3 text-rose-500/60 opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
+                  </div>
+                  <p className="text-sm text-zinc-300 group-hover:underline pt-1 truncate">
+                    {locationStr || 'Buscar en mapa'}
+                  </p>
+                  <span className="text-[10px] text-zinc-500 group-hover:text-rose-400/80 block transition-colors">
+                    Ver ubicación en Google Maps &rarr;
+                  </span>
+                </a>
+
+                {/* 5. Rating Google Maps */}
+                {lead.rating !== null && lead.rating !== undefined && (
+                  <a
+                    href={googleMapsProfileUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="bg-zinc-950/60 p-4 rounded-xl border border-zinc-800/80 hover:border-amber-500/40 hover:bg-zinc-900/80 transition-all cursor-pointer group space-y-1 block"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider flex items-center gap-1.5">
+                        <Sparkles className="h-3.5 w-3.5 text-amber-400" /> Rating Google Maps
+                      </span>
+                      <ExternalLink className="h-3 w-3 text-amber-500/60 opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
+                    </div>
+                    <p className="text-sm text-zinc-200 pt-1 font-semibold group-hover:underline">
+                      ⭐ {lead.rating.toFixed(1)} {lead.reviewsCount !== null && lead.reviewsCount !== undefined && <span className="text-zinc-400 font-normal">({lead.reviewsCount.toLocaleString('es-ES')} reseñas)</span>}
+                    </p>
+                    <span className="text-[10px] text-zinc-500 group-hover:text-amber-400/80 block transition-colors">
+                      Ver perfil y opiniones en Maps &rarr;
+                    </span>
+                  </a>
+                )}
+
+                {/* 6. Categoría Google */}
+                {lead.googleCategory && (
+                  <a
+                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${lead.googleCategory} ${lead.city || ''}`.trim())}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="bg-zinc-950/60 p-4 rounded-xl border border-zinc-800/80 hover:border-cyan-500/40 hover:bg-zinc-900/80 transition-all cursor-pointer group space-y-1 block"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider flex items-center gap-1.5">
+                        <Layers className="h-3.5 w-3.5 text-cyan-400" /> Categoría Google
+                      </span>
+                      <ExternalLink className="h-3 w-3 text-cyan-500/60 opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
+                    </div>
+                    <p className="text-sm text-zinc-300 group-hover:underline pt-1 truncate">{lead.googleCategory}</p>
+                    <span className="text-[10px] text-zinc-500 group-hover:text-cyan-400/80 block transition-colors">
+                      Explorar categoría en Maps &rarr;
+                    </span>
+                  </a>
+                )}
+              </div>
+
+              {/* Redes Sociales Integradas en Información General */}
+              <div className="pt-4 border-t border-zinc-800/80 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-400 flex items-center gap-2">
+                    <Share2 className="h-4 w-4 text-purple-400" />
+                    Perfiles de Redes Sociales ({lead.socialProfiles.length})
+                  </h4>
+                </div>
+
+                {lead.socialProfiles.length === 0 ? (
+                  <div className="bg-zinc-950/40 border border-zinc-800/60 rounded-xl p-4 text-center">
+                    <p className="text-xs text-zinc-500">
+                      No se han vinculado perfiles sociales a este prospecto todavía.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {lead.socialProfiles.map((profile) => {
+                      const profileUrl = getSocialProfileUrl(profile);
+                      return (
+                        <a
+                          key={profile.id}
+                          href={profileUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="bg-zinc-950/70 border border-zinc-800/80 hover:border-purple-500/40 hover:bg-zinc-900/80 rounded-xl p-3.5 space-y-2.5 transition-all group block cursor-pointer"
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <Share2 className="h-3.5 w-3.5 text-purple-400 group-hover:scale-110 transition-transform" />
+                              <span className="font-semibold text-xs text-zinc-100 capitalize">
+                                {profile.platform.toLowerCase().replace('_', ' ')}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              {profile.verified && (
+                                <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30 text-[9px] px-1.5 py-0">
+                                  Verificado
+                                </Badge>
+                              )}
+                              <ExternalLink className="h-3 w-3 text-purple-400 opacity-60 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
+                            </div>
+                          </div>
+
+                          <div className="space-y-1">
+                            <p className="text-xs font-mono font-medium text-purple-300 group-hover:text-purple-200 truncate flex items-center gap-1">
+                              <AtSign className="h-3 w-3 shrink-0 opacity-70" />
+                              {profile.username ? profile.username.replace(/^@/, '') : profile.url.replace(/^https?:\/\/(www\.)?/, '')}
+                            </p>
+                            {profile.followers !== null && profile.followers !== undefined && (
+                              <p className="text-[11px] text-zinc-400">
+                                Seguidores: <strong className="text-zinc-200">{profile.followers.toLocaleString('es-ES')}</strong>
+                              </p>
+                            )}
+                          </div>
+
+                          {profile.bio && (
+                            <p className="text-[11px] text-zinc-400 line-clamp-2 italic bg-zinc-900/60 p-2 rounded border border-zinc-800/60">
+                              &ldquo;{profile.bio}&rdquo;
+                            </p>
+                          )}
+
+                          {profile.emailInBio && (
+                            <p className="text-[11px] text-emerald-400 font-mono truncate">
+                              Email Bio: {profile.emailInBio}
+                            </p>
+                          )}
+                        </a>
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -371,68 +581,6 @@ export default async function LeadDetailPage({ params }: PageProps) {
           initialProposal={lead.proposal}
         />
 
-        {/* Bloque: Perfiles de Redes Sociales */}
-        <section className="bg-zinc-900/60 border border-zinc-800/80 rounded-2xl p-6 md:p-8 space-y-6 shadow-xl backdrop-blur-sm">
-          <div className="flex items-center justify-between border-b border-zinc-800/80 pb-4">
-            <div className="flex items-center gap-2.5">
-              <Share2 className="h-5 w-5 text-purple-400" />
-              <h2 className="text-lg font-bold text-white">Perfiles de Redes Sociales ({lead.socialProfiles.length})</h2>
-            </div>
-          </div>
-
-          {lead.socialProfiles.length === 0 ? (
-            <p className="text-xs text-zinc-500 py-4 text-center">
-              No se han vinculado perfiles sociales a este prospecto todavía.
-            </p>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {lead.socialProfiles.map((profile) => (
-                <div key={profile.id} className="bg-zinc-950/70 border border-zinc-800/80 rounded-xl p-4 space-y-3 hover:border-zinc-700 transition-colors">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Share2 className="h-4 w-4 text-purple-400" />
-                      <span className="font-semibold text-sm text-zinc-100 capitalize">{profile.platform}</span>
-                    </div>
-                    {profile.verified && (
-                      <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30 text-[10px]">Verificado</Badge>
-                    )}
-                  </div>
-
-                  <div className="space-y-1">
-                    <a
-                      href={profile.username ? `https://${profile.platform === 'TIKTOK' ? 'tiktok.com/@' : profile.platform === 'INSTAGRAM' ? 'instagram.com/' : profile.platform.toLowerCase() + '.com/'}${profile.username}` : profile.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs font-medium text-purple-400 hover:underline flex items-center gap-1 truncate"
-                    >
-                      <AtSign className="h-3 w-3 shrink-0" />
-                      {profile.username ? `@${profile.username}` : profile.url}
-                      <ExternalLink className="h-3 w-3 shrink-0" />
-                    </a>
-                    {profile.followers !== null && (
-                      <p className="text-[11px] text-zinc-400">
-                        Seguidores: <strong className="text-zinc-200">{profile.followers.toLocaleString('es-ES')}</strong>
-                      </p>
-                    )}
-                  </div>
-
-                  {profile.bio && (
-                    <p className="text-xs text-zinc-400 line-clamp-2 italic bg-zinc-900/60 p-2 rounded border border-zinc-800/60">
-                      &ldquo;{profile.bio}&rdquo;
-                    </p>
-                  )}
-
-                  {profile.emailInBio && (
-                    <p className="text-xs text-emerald-400 font-mono truncate">
-                      Email Bio: {profile.emailInBio}
-                    </p>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
-
         {/* Bloque: Personas de Contacto / Ejecutivos */}
         <section className="bg-zinc-900/60 border border-zinc-800/80 rounded-2xl p-6 md:p-8 space-y-6 shadow-xl backdrop-blur-sm">
           <div className="flex items-center justify-between border-b border-zinc-800/80 pb-4">
@@ -467,8 +615,13 @@ export default async function LeadDetailPage({ params }: PageProps) {
                       </a>
                     )}
                     {contact.phone && (
-                      <a href={`tel:${contact.phone}`} className="text-emerald-400 font-mono flex items-center gap-1">
-                        <Phone className="h-3 w-3" /> {contact.phone}
+                      <a
+                        href={`https://wa.me/${contact.phone.replace(/\D/g, '')}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-emerald-400 font-mono flex items-center gap-1 hover:underline"
+                      >
+                        <MessageCircle className="h-3 w-3" /> {contact.phone}
                       </a>
                     )}
                   </div>
