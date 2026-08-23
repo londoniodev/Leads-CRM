@@ -29,9 +29,31 @@ model Lead {
   
   socialProfiles SocialProfile[]
   contacts       ContactPerson[]
+  proposal       LeadProposal?
 
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @default(now()) @updatedAt
+}
+
+model LeadProposal {
+  id                 String   @id @default(uuid())
+  leadId             String   @unique
+  lead               Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  painDiagnosis      String   @db.Text
+  transformationGoal String   @db.Text
+  pilar1Leads        String   @db.Text
+  pilar2Conversion   String   @db.Text
+  pilar3Automation   String   @db.Text
+  whatsappPitch      String   @db.Text
+  coldEmailPitch     String   @db.Text
+  callScript         String   @db.Text
+
+  isCustomized       Boolean  @default(false)
+  generatedAt        DateTime @default(now())
+  updatedAt          DateTime @default(now()) @updatedAt
+
+  @@index([leadId])
 }
 
 model SocialProfile {

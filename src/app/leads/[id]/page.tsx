@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { buttonVariants } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { LeadStatus } from '@prisma/client';
+import { LeadProposalEditor } from '@/components/proposals/lead-proposal-editor';
 import {
   ArrowLeft,
   Building2,
@@ -42,6 +43,7 @@ export default async function LeadDetailPage({ params }: PageProps) {
     include: {
       socialProfiles: true,
       contacts: true,
+      proposal: true,
     },
   });
 
@@ -345,6 +347,12 @@ export default async function LeadDetailPage({ params }: PageProps) {
             </div>
           </div>
         </div>
+
+        {/* Sección: Copiloto de Ventas & Propuesta de Transformación con IA */}
+        <LeadProposalEditor
+          leadId={lead.id}
+          initialProposal={lead.proposal}
+        />
 
         {/* Bloque: Perfiles de Redes Sociales */}
         <section className="bg-zinc-900/60 border border-zinc-800/80 rounded-2xl p-6 md:p-8 space-y-6 shadow-xl backdrop-blur-sm">
